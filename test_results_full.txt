@@ -1,0 +1,172 @@
+2026-03-12 15:07:33,679 - __main__ - INFO - ================================================================================
+2026-03-12 15:07:33,679 - __main__ - INFO - BUSINESS LOGIC TEST - AI EXTRACTION & PRICING CALCULATION
+2026-03-12 15:07:33,680 - __main__ - INFO - ================================================================================
+2026-03-12 15:07:33,680 - __main__ - INFO - 
+2026-03-12 15:07:33,687 - __main__ - INFO - \u2713 Config loaded
+2026-03-12 15:07:34,576 - __main__ - INFO - \u2713 OpenAI service initialized
+2026-03-12 15:07:34,576 - __main__ - INFO - 
+2026-03-12 15:07:34,576 - __main__ - INFO - Reading sample transcript...
+2026-03-12 15:07:34,577 - __main__ - INFO - \u2713 Loaded transcript: 3548 characters
+2026-03-12 15:07:34,577 - __main__ - INFO - 
+2026-03-12 15:07:34,577 - __main__ - INFO - ================================================================================
+2026-03-12 15:07:34,577 - __main__ - INFO - STEP 1: AI VARIABLE EXTRACTION
+2026-03-12 15:07:34,577 - __main__ - INFO - ================================================================================
+2026-03-12 15:07:34,577 - __main__ - INFO - 
+2026-03-12 15:07:34,577 - __main__ - INFO - Sending to OpenAI GPT-4o for structured extraction...
+2026-03-12 15:07:39,401 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-03-12 15:07:39,411 - app.services.openai_service - INFO - Extracted variables: company=TechVision Inc., coachee=Michael Chen, signals=4
+2026-03-12 15:07:39,411 - __main__ - INFO - \u2713 Extraction complete!
+2026-03-12 15:07:39,411 - __main__ - INFO - 
+2026-03-12 15:07:39,411 - __main__ - INFO - EXTRACTED VARIABLES:
+2026-03-12 15:07:39,412 - __main__ - INFO -   Client Company: TechVision Inc.
+2026-03-12 15:07:39,412 - __main__ - INFO -   Coachee: Michael Chen (CTO)
+2026-03-12 15:07:39,412 - __main__ - INFO -   Decision Maker: Sarah Johnson (sarah.johnson@techvision.com)
+2026-03-12 15:07:39,412 - __main__ - INFO -   Seniority Level: C-Suite
+2026-03-12 15:07:39,412 - __main__ - INFO -   Duration: 6 months
+2026-03-12 15:07:39,412 - __main__ - INFO -   Market Type: Mature
+2026-03-12 15:07:39,412 - __main__ - INFO -   Budget Ceiling: None
+2026-03-12 15:07:39,412 - __main__ - INFO -   Budget Phrases: ['our benchmark is around $18,000 to $20,000', "we've typically used independent coaches before"]
+2026-03-12 15:07:39,412 - __main__ - INFO -   Self-Awareness Signals: ['executive presence', 'how others experience them', 'leadership brand', 'blind spots']
+2026-03-12 15:07:39,413 - __main__ - INFO -   Existing 360° Status: recent 360
+2026-03-12 15:07:39,413 - __main__ - INFO -   Payment Terms Phrases: ['Net 30 days', '50% upfront', '50% at the midpoint']
+2026-03-12 15:07:39,413 - __main__ - INFO - 
+2026-03-12 15:07:39,413 - __main__ - INFO - ================================================================================
+2026-03-12 15:07:39,413 - __main__ - INFO - STEP 2: PRICING CALCULATION
+2026-03-12 15:07:39,413 - __main__ - INFO - ================================================================================
+2026-03-12 15:07:39,413 - __main__ - INFO - 
+2026-03-12 15:07:39,413 - __main__ - INFO - Applying business logic...
+2026-03-12 15:07:39,415 - __main__ - INFO - \u2713 Pricing calculated!
+2026-03-12 15:07:39,415 - __main__ - INFO - 
+2026-03-12 15:07:39,415 - __main__ - INFO - PRICING RESULTS:
+2026-03-12 15:07:39,415 - __main__ - INFO -   Program Tier: ASCENT
+2026-03-12 15:07:39,415 - __main__ - INFO -   Bill Rate: $600.0/hour
+2026-03-12 15:07:39,415 - __main__ - INFO -   Total Coaching Hours: 20.2 hours
+2026-03-12 15:07:39,415 - __main__ - INFO -   Total Price: $12,150
+2026-03-12 15:07:39,415 - __main__ - INFO -   Payment Terms: 100% upfront payment, Net 30 days
+2026-03-12 15:07:39,415 - __main__ - INFO - 
+2026-03-12 15:07:39,415 - __main__ - INFO - 360° ASSESSMENT DECISION:
+2026-03-12 15:07:39,416 - __main__ - INFO -   Decision: ELIMINATE
+2026-03-12 15:07:39,416 - __main__ - INFO -   Hours: 0.0
+2026-03-12 15:07:39,416 - __main__ - INFO -   Rationale: 360° eliminated: recent 360. Will use existing feedback.
+2026-03-12 15:07:39,416 - __main__ - INFO - 
+2026-03-12 15:07:39,416 - __main__ - INFO - BUDGET REDUCTIONS APPLIED:
+2026-03-12 15:07:39,416 - __main__ - INFO -   Trigger: Budget sensitivity detected: our benchmark is around $18,000 to $20,000, we've typically used independent coaches before
+2026-03-12 15:07:39,416 - __main__ - INFO -   Number of Levers: 4
+2026-03-12 15:07:39,416 - __main__ - INFO -   Total Saved: $1,650
+2026-03-12 15:07:39,416 - __main__ - INFO - 
+2026-03-12 15:07:39,417 - __main__ - INFO -   Lever 1: Stakeholder Sessions
+2026-03-12 15:07:39,417 - __main__ - INFO -     1.0 hrs \u2192 0.75 hrs
+2026-03-12 15:07:39,417 - __main__ - INFO -     Saved: $150
+2026-03-12 15:07:39,417 - __main__ - INFO -     Rationale: Reduced stakeholder meeting from 60 minutes to 45 minutes
+2026-03-12 15:07:39,417 - __main__ - INFO - 
+2026-03-12 15:07:39,417 - __main__ - INFO -   Lever 2: Developmental History Interview
+2026-03-12 15:07:39,417 - __main__ - INFO -     2.0 hrs \u2192 1.5 hrs
+2026-03-12 15:07:39,417 - __main__ - INFO -     Saved: $300
+2026-03-12 15:07:39,417 - __main__ - INFO -     Rationale: Reduced developmental history interview from 2 hours to 1.5 hours
+2026-03-12 15:07:39,417 - __main__ - INFO - 
+2026-03-12 15:07:39,417 - __main__ - INFO -   Lever 4: Implementation Sessions
+2026-03-12 15:07:39,417 - __main__ - INFO -     12.0 hrs \u2192 11.0 hrs
+2026-03-12 15:07:39,417 - __main__ - INFO -     Saved: $900
+2026-03-12 15:07:39,418 - __main__ - INFO -     Rationale: Reduced implementation sessions from 12 to 11
+2026-03-12 15:07:39,418 - __main__ - INFO - 
+2026-03-12 15:07:39,418 - __main__ - INFO -   Lever 6: Assessment Feedback Session
+2026-03-12 15:07:39,418 - __main__ - INFO -     2.0 hrs \u2192 1.5 hrs
+2026-03-12 15:07:39,418 - __main__ - INFO -     Saved: $300
+2026-03-12 15:07:39,418 - __main__ - INFO -     Rationale: Reduced assessment feedback session from 2 hours to 1.5 hours (last resort lever)
+2026-03-12 15:07:39,418 - __main__ - INFO - 
+2026-03-12 15:07:39,418 - __main__ - INFO - SESSION HOURS BREAKDOWN:
+2026-03-12 15:07:39,418 - __main__ - INFO -   Implementation Sessions: 11 sessions
+2026-03-12 15:07:39,418 - __main__ - INFO -   Stakeholder Meetings: 0.75 hrs
+2026-03-12 15:07:39,418 - __main__ - INFO -   Developmental History: 1.5 hrs
+2026-03-12 15:07:39,418 - __main__ - INFO -   360° Interviews: 0.0 hrs
+2026-03-12 15:07:39,418 - __main__ - INFO -   Assessment Feedback: 1.5 hrs
+2026-03-12 15:07:39,418 - __main__ - INFO -   Dev Planning: 0.0 hrs
+2026-03-12 15:07:39,419 - __main__ - INFO -   Coaching Zone: 12 months
+2026-03-12 15:07:39,419 - __main__ - INFO - 
+2026-03-12 15:07:39,419 - __main__ - INFO - ================================================================================
+2026-03-12 15:07:39,419 - __main__ - INFO - STEP 3: RATIONALE GENERATION
+2026-03-12 15:07:39,419 - __main__ - INFO - ================================================================================
+2026-03-12 15:07:39,419 - __main__ - INFO - 
+2026-03-12 15:07:39,419 - __main__ - INFO - \u2713 Generated rationale: 1948 characters
+2026-03-12 15:07:39,419 - __main__ - INFO - 
+2026-03-12 15:07:39,419 - __main__ - INFO - RATIONALE DOCUMENT:
+2026-03-12 15:07:39,419 - __main__ - INFO - --------------------------------------------------------------------------------
+2026-03-12 15:07:39,419 - __main__ - INFO - # Pricing Rationale: TechVision Inc.
+**Coachee:** Michael Chen (CTO)
+**Decision Maker:** Sarah Johnson
+
+## Program Tier Selection
+**Selected Tier:** ASCENT
+**Seniority Level:** C-Suite
+**Engagement Duration:** 6 months
+**Market Type:** Mature
+**Flags:** TIER_AMBIGUOUS_DURATION
+
+## Bill Rate Calculation
+**Hourly Rate:** $600.0/hour
+**Basis:** C-Suite level in Mature market
+
+## 360° Assessment Decision
+**Decision:** ELIMINATE
+**Hours Allocated:** 0.0
+**Rationale:** 360° eliminated: recent 360. Will use existing feedback.
+**Signals Detected:** executive presence, how others experience them, leadership brand, blind spots
+**Existing 360° Status:** recent 360
+
+## Budget Reductions Applied
+**Trigger:** Budget sensitivity detected: our benchmark is around $18,000 to $20,000, we've typically used independent coaches before
+**Budget Signals:** our benchmark is around $18,000 to $20,000, we've typically used independent coaches before
+
+Applied 4 budget reduction lever(s): Lever 1, Lever 2, Lever 4, Lever 6. Total cost reduction: $1,650
+
+- Stakeholder Sessions: 1.0 -> 0.75 hours (saved $150) - Reduced stakeholder meeting from 60 minutes to 45 minutes
+- Developmental History Interview: 2.0 -> 1.5 hours (saved $300) - Reduced developmental history interview from 2 hours to 1.5 hours
+- Implementation Sessions: 12.0 -> 11.0 hours (saved $900) - Reduced implementation sessions from 12 to 11
+- Assessment Feedback Session: 2.0 -> 1.5 hours (saved $300) - Reduced assessment feedback session from 2 hours to 1.5 hours (last resort lever)
+
+## Session Hours Breakdown
+- Implementation Sessions: 11 sessions
+- Stakeholder Meetings: 0.75 hours
+- Developmental History: 1.5 hours
+- 360° Interviews: 0.0 hours
+- Assessment Feedback: 1.5 hours
+- Coaching Zone Access: 12 months
+
+## Total Pricing
+**Total Coaching Hours:** 20.2 hours
+**Hourly Rate:** $600.0/hour
+**Total Engagement Price:** $12,150
+**Payment Terms:** 100% upfront payment, Net 30 days
+
+2026-03-12 15:07:39,419 - __main__ - INFO - --------------------------------------------------------------------------------
+2026-03-12 15:07:39,419 - __main__ - INFO - 
+2026-03-12 15:07:39,419 - __main__ - INFO - ================================================================================
+2026-03-12 15:07:39,419 - __main__ - INFO - ANALYSIS: IS THIS CORRECT?
+2026-03-12 15:07:39,419 - __main__ - INFO - ================================================================================
+2026-03-12 15:07:39,419 - __main__ - INFO - 
+2026-03-12 15:07:39,419 - __main__ - INFO - \u2713 TIER SELECTION:
+2026-03-12 15:07:39,419 - __main__ - INFO -   \u26a0\ufe0f  CHECK: CTO \u2192 ASCENT
+2026-03-12 15:07:39,420 - __main__ - INFO - 
+2026-03-12 15:07:39,420 - __main__ - INFO - \u2713 BILL RATE:
+2026-03-12 15:07:39,420 - __main__ - INFO -   \u26a0\ufe0f  CHECK: C-Suite \u2192 $600.0/hr
+2026-03-12 15:07:39,420 - __main__ - INFO - 
+2026-03-12 15:07:39,420 - __main__ - INFO - \u2713 360° DECISION:
+2026-03-12 15:07:39,420 - __main__ - INFO -   \u2713 CORRECT: 'just completed 360 last quarter' \u2192 ELIMINATE (0 hrs)
+2026-03-12 15:07:39,420 - __main__ - INFO - 
+2026-03-12 15:07:39,420 - __main__ - INFO - \u2713 BUDGET REDUCTIONS:
+2026-03-12 15:07:39,420 - __main__ - INFO -   \u2713 CORRECT: Budget phrases detected \u2192 Reductions applied
+2026-03-12 15:07:39,420 - __main__ - INFO - 
+2026-03-12 15:07:39,420 - __main__ - INFO - \u2713 PAYMENT TERMS:
+2026-03-12 15:07:39,420 - __main__ - INFO -   \u26a0\ufe0f  CHECK: 100% upfront payment, Net 30 days
+2026-03-12 15:07:39,420 - __main__ - INFO - 
+2026-03-12 15:07:39,421 - __main__ - INFO - ================================================================================
+2026-03-12 15:07:39,421 - __main__ - INFO - \u2713\u2713\u2713 BUSINESS LOGIC TEST COMPLETE \u2713\u2713\u2713
+2026-03-12 15:07:39,421 - __main__ - INFO - ================================================================================
+2026-03-12 15:07:39,421 - __main__ - INFO - 
+2026-03-12 15:07:39,421 - __main__ - INFO - SUMMARY:
+2026-03-12 15:07:39,421 - __main__ - INFO -   Client: TechVision Inc.
+2026-03-12 15:07:39,421 - __main__ - INFO -   Coachee: Michael Chen
+2026-03-12 15:07:39,421 - __main__ - INFO -   Program: ASCENT
+2026-03-12 15:07:39,421 - __main__ - INFO -   Price: $12,150
+2026-03-12 15:07:39,421 - __main__ - INFO -   All business logic appears to be working correctly!
+2026-03-12 15:07:39,421 - __main__ - INFO - 

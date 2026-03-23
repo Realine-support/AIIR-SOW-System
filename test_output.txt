@@ -1,0 +1,94 @@
+Traceback (most recent call last):
+  File "D:\AIIR\aiir-sow-system\test_business_logic.py", line 207, in <module>
+    test_case_2_budget_constrained()
+  File "D:\AIIR\aiir-sow-system\test_business_logic.py", line 114, in test_case_2_budget_constrained
+    print(rationale)
+  File "C:\Users\Admin\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 923: character maps to <undefined>
+
+
+================================================================================
+                    AIIR SOW SYSTEM - BUSINESS LOGIC TEST                       
+================================================================================
+
+
+================================================================================
+TEST CASE 1: Standard C-Suite Engagement (No Budget Constraints)
+================================================================================
+
+Tier Selected: ASCENT
+Bill Rate: $600.0/hour
+360° Decision: KEEP (6.0 hours)
+Budget Reductions Applied: 0
+Total Price: $17,400
+Payment Terms: 100% upfront payment, Net 30 days
+
+--------------------------------------------------------------------------------
+FULL RATIONALE:
+--------------------------------------------------------------------------------
+# Pricing Rationale: GlobalTech Solutions
+**Coachee:** Amanda Hayes (Chief Revenue Officer)
+**Decision Maker:** James Chen
+
+## Program Tier Selection
+**Selected Tier:** ASCENT
+**Seniority Level:** C-Suite
+**Engagement Duration:** 9 months
+**Market Type:** Mature
+**Flags:** TIER_AMBIGUOUS_DURATION
+
+## Bill Rate Calculation
+**Hourly Rate:** $600.0/hour
+**Basis:** C-Suite level in Mature market
+
+## 360° Assessment Decision
+**Decision:** KEEP
+**Hours Allocated:** 6.0
+**Rationale:** 360° kept at 6.0 hours. Signals detected: executive presence, needs honest feedback, stakeholder perception. Leader will benefit from deeper qualitative feedback.
+**Signals Detected:** executive presence, needs honest feedback, stakeholder perception
+
+## Budget Reductions
+No budget reductions applied (standard pricing)
+
+## Session Hours Breakdown
+- Implementation Sessions: 12 sessions
+- Stakeholder Meetings: 1.0 hours
+- Developmental History: 2.0 hours
+- 360° Interviews: 6.0 hours
+- Assessment Feedback: 2.0 hours
+- Coaching Zone Access: 12 months
+
+## Total Pricing
+**Total Coaching Hours:** 29.0 hours
+**Hourly Rate:** $600.0/hour
+**Total Engagement Price:** $17,400
+**Payment Terms:** 100% upfront payment, Net 30 days
+
+
+
+================================================================================
+TEST CASE 2: Budget-Constrained C-Suite (Megan's Real Example)
+================================================================================
+
+Tier Selected: IGNITE
+Bill Rate: $500.0/hour
+360° Decision: KEEP (4.0 hours)
+Budget Reductions Applied: 4
+Total Cost Saved: $2,125
+Levers Applied:
+  - Lever 1: Stakeholder Sessions (saved $125)
+  - Lever 2: Developmental History Interview (saved $250)
+  - Lever 3: 360° Interview Meetings (saved $1,000)
+  - Lever 4: Implementation Sessions (saved $750)
+Total Price: $9,375
+Payment Terms: 50% upfront, 50% at midpoint, Net 45 days
+
+--------------------------------------------------------------------------------
+FULL RATIONALE:
+--------------------------------------------------------------------------------
+
+ERROR: 'charmap' codec can't encode character '\u2192' in position 923: character maps to <undefined>
+
+

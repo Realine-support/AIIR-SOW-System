@@ -1,0 +1,246 @@
+
+
+================================================================================
+                    AIIR SOW SYSTEM - BUSINESS LOGIC TEST                       
+================================================================================
+
+
+================================================================================
+TEST CASE 1: Standard C-Suite Engagement (No Budget Constraints)
+================================================================================
+
+Tier Selected: ASCENT
+Bill Rate: $600.0/hour
+360° Decision: KEEP (6.0 hours)
+Budget Reductions Applied: 0
+Total Price: $17,400
+Payment Terms: 100% upfront payment, Net 30 days
+
+--------------------------------------------------------------------------------
+FULL RATIONALE:
+--------------------------------------------------------------------------------
+# Pricing Rationale: GlobalTech Solutions
+**Coachee:** Amanda Hayes (Chief Revenue Officer)
+**Decision Maker:** James Chen
+
+## Program Tier Selection
+**Selected Tier:** ASCENT
+**Seniority Level:** C-Suite
+**Engagement Duration:** 9 months
+**Market Type:** Mature
+**Flags:** TIER_AMBIGUOUS_DURATION
+
+## Bill Rate Calculation
+**Hourly Rate:** $600.0/hour
+**Basis:** C-Suite level in Mature market
+
+## 360° Assessment Decision
+**Decision:** KEEP
+**Hours Allocated:** 6.0
+**Rationale:** 360° kept at 6.0 hours. Signals detected: executive presence, needs honest feedback, stakeholder perception. Leader will benefit from deeper qualitative feedback.
+**Signals Detected:** executive presence, needs honest feedback, stakeholder perception
+
+## Budget Reductions
+No budget reductions applied (standard pricing)
+
+## Session Hours Breakdown
+- Implementation Sessions: 12 sessions
+- Stakeholder Meetings: 1.0 hours
+- Developmental History: 2.0 hours
+- 360° Interviews: 6.0 hours
+- Assessment Feedback: 2.0 hours
+- Coaching Zone Access: 12 months
+
+## Total Pricing
+**Total Coaching Hours:** 29.0 hours
+**Hourly Rate:** $600.0/hour
+**Total Engagement Price:** $17,400
+**Payment Terms:** 100% upfront payment, Net 30 days
+
+
+
+================================================================================
+TEST CASE 2: Budget-Constrained C-Suite (Megan's Real Example)
+================================================================================
+
+Tier Selected: IGNITE
+Bill Rate: $500.0/hour
+360° Decision: KEEP (4.0 hours)
+Budget Reductions Applied: 4
+Total Cost Saved: $2,125
+Levers Applied:
+  - Lever 1: Stakeholder Sessions (saved $125)
+  - Lever 2: Developmental History Interview (saved $250)
+  - Lever 3: 360° Interview Meetings (saved $1,000)
+  - Lever 4: Implementation Sessions (saved $750)
+Total Price: $9,375
+Payment Terms: 50% upfront, 50% at midpoint, Net 45 days
+
+--------------------------------------------------------------------------------
+FULL RATIONALE:
+--------------------------------------------------------------------------------
+# Pricing Rationale: Cost-Conscious Corp
+**Coachee:** John Smith (Senior Vice President)
+**Decision Maker:** Jane Doe
+
+## Program Tier Selection
+**Selected Tier:** IGNITE
+**Seniority Level:** Senior
+**Engagement Duration:** 8 months
+**Market Type:** Mature
+
+## Bill Rate Calculation
+**Hourly Rate:** $500.0/hour
+**Basis:** Senior level in Mature market
+
+## 360° Assessment Decision
+**Decision:** KEEP
+**Hours Allocated:** 4.0
+**Rationale:** 360° kept at standard 6.0 hours. No elimination or reduction signals detected.
+
+## Budget Reductions Applied
+**Trigger:** Explicit budget ceiling mentioned: $10,000
+**Budget Ceiling:** $10,000
+**Budget Signals:** we do not pay over $25,000 for coaching engagements, that price feels high, need something more cost-conscious
+
+Applied 4 budget reduction lever(s): Lever 1, Lever 2, Lever 3, Lever 4. Total cost reduction: $2,125
+
+- Stakeholder Sessions: 1.0 -> 0.75 hours (saved $125) - Reduced stakeholder meeting from 60 minutes to 45 minutes
+- Developmental History Interview: 2.0 -> 1.5 hours (saved $250) - Reduced developmental history interview from 2 hours to 1.5 hours
+- 360° Interview Meetings: 6.0 -> 4.0 hours (saved $1,000) - Reduced 360° interviews (shorter duration or fewer meetings)
+- Implementation Sessions: 8.0 -> 7.0 hours (saved $750) - Reduced implementation sessions from 8 to 7
+
+## Session Hours Breakdown
+- Implementation Sessions: 7 sessions
+- Stakeholder Meetings: 0.75 hours
+- Developmental History: 1.5 hours
+- 360° Interviews: 4.0 hours
+- Assessment Feedback: 2.0 hours
+- Coaching Zone Access: 7 months
+
+## Total Pricing
+**Total Coaching Hours:** 18.8 hours
+**Hourly Rate:** $500.0/hour
+**Total Engagement Price:** $9,375
+**Payment Terms:** 50% upfront, 50% at midpoint, Net 45 days
+
+
+
+================================================================================
+TEST CASE 3: Eliminate 360° (Recent 360° Completed)
+================================================================================
+
+Tier Selected: IGNITE
+Bill Rate: $400.0/hour
+360° Decision: ELIMINATE (0.0 hours)
+360° Rationale: 360° eliminated: just completed a 360 last quarter. Will use existing feedback.
+Budget Reductions Applied: 0
+Total Price: $6,800
+Payment Terms: Quarterly installments, Net 30 days
+
+--------------------------------------------------------------------------------
+FULL RATIONALE:
+--------------------------------------------------------------------------------
+# Pricing Rationale: Tech Startup Inc
+**Coachee:** Sarah Johnson (VP of Engineering)
+**Decision Maker:** Sarah Johnson
+
+## Program Tier Selection
+**Selected Tier:** IGNITE
+**Seniority Level:** Senior
+**Engagement Duration:** 7 months
+**Market Type:** Emerging
+
+## Bill Rate Calculation
+**Hourly Rate:** $400.0/hour
+**Basis:** Senior level in Emerging market
+
+## 360° Assessment Decision
+**Decision:** ELIMINATE
+**Hours Allocated:** 0.0
+**Rationale:** 360° eliminated: just completed a 360 last quarter. Will use existing feedback.
+**Existing 360° Status:** just completed a 360 last quarter
+
+## Budget Reductions
+No budget reductions applied (standard pricing)
+
+## Session Hours Breakdown
+- Implementation Sessions: 8 sessions
+- Stakeholder Meetings: 1.0 hours
+- Developmental History: 2.0 hours
+- 360° Interviews: 0.0 hours
+- Assessment Feedback: 2.0 hours
+- Coaching Zone Access: 7 months
+
+## Total Pricing
+**Total Coaching Hours:** 17.0 hours
+**Hourly Rate:** $400.0/hour
+**Total Engagement Price:** $6,800
+**Payment Terms:** Quarterly installments, Net 30 days
+
+
+
+================================================================================
+TEST CASE 4: Mid-Level Director (ROADMAP Tier)
+================================================================================
+
+Tier Selected: ROADMAP
+Bill Rate: $400.0/hour
+360° Decision: KEEP (6.0 hours)
+Budget Reductions Applied: 0
+Total Price: $7,400
+Payment Terms: 100% upfront payment, Net 30 days
+
+--------------------------------------------------------------------------------
+FULL RATIONALE:
+--------------------------------------------------------------------------------
+# Pricing Rationale: Manufacturing Co
+**Coachee:** Mike Williams (Director of Operations)
+**Decision Maker:** VP of HR
+
+## Program Tier Selection
+**Selected Tier:** ROADMAP
+**Seniority Level:** Mid-level
+**Engagement Duration:** 5 months
+**Market Type:** Mature
+
+## Bill Rate Calculation
+**Hourly Rate:** $400.0/hour
+**Basis:** Mid-level level in Mature market
+
+## 360° Assessment Decision
+**Decision:** KEEP
+**Hours Allocated:** 6.0
+**Rationale:** 360° kept at 6.0 hours. Signals detected: needs to improve, communication issues. Leader will benefit from deeper qualitative feedback.
+**Signals Detected:** needs to improve, communication issues
+
+## Budget Reductions
+No budget reductions applied (standard pricing)
+
+## Session Hours Breakdown
+- Implementation Sessions: 5 sessions
+- Stakeholder Meetings: 1.0 hours
+- Developmental History: 2.0 hours
+- 360° Interviews: 6.0 hours
+- Assessment Feedback: 2.0 hours
+- Coaching Zone Access: 6 months
+
+## Total Pricing
+**Total Coaching Hours:** 18.5 hours
+**Hourly Rate:** $400.0/hour
+**Total Engagement Price:** $7,400
+**Payment Terms:** 100% upfront payment, Net 30 days
+
+
+
+================================================================================
+SUCCESS: ALL TESTS COMPLETED SUCCESSFULLY!
+================================================================================
+
+Next Steps:
+1. Review the pricing calculations above
+2. Verify the 360° decision logic is working correctly
+3. Check that budget reduction levers are applied in the right order
+4. Proceed to implement Google API services and OpenAI integration
+
+
