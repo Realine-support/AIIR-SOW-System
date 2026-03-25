@@ -4,15 +4,15 @@ FROM python:3.11.9-slim
 # Set working directory
 WORKDIR /app
 
-# Copy only requirements first (for caching)
-COPY aiir-sow-system/requirements.txt /app/requirements.txt
-
-# Install dependencies with Python 3.11
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
-
-# Copy application code
+# Copy application code FIRST (to bust Docker cache)
 COPY aiir-sow-system /app
+
+# Verify Python version
+RUN python --version
+
+# Install dependencies with Python 3.11 (NO CACHE, FRESH INSTALL)
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r /app/requirements.txt
 
 # Expose port (Railway will provide PORT env var)
 EXPOSE 8000
