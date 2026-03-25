@@ -59,12 +59,8 @@ class Config(BaseSettings):
     upstash_redis_rest_url: Optional[str] = None
     upstash_redis_rest_token: Optional[str] = None
 
-    # === Webhook URLs ===
-    base_url: str = "http://localhost:8000"
-    approve_pricing_webhook_url: Optional[str] = None
-    approve_sow_webhook_url: Optional[str] = None
-
     # === Application Configuration ===
+    base_url: str = "http://localhost:8000"
     environment: str = "development"
     log_level: str = "INFO"
     debug: bool = True
@@ -73,15 +69,6 @@ class Config(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        # Auto-generate webhook URLs if not provided
-        if not self.approve_pricing_webhook_url:
-            self.approve_pricing_webhook_url = f"{self.base_url}/webhooks/approve-pricing"
-        if not self.approve_sow_webhook_url:
-            self.approve_sow_webhook_url = f"{self.base_url}/webhooks/approve-sow"
 
     @property
     def is_production(self) -> bool:
