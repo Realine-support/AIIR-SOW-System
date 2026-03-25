@@ -102,36 +102,10 @@ async def check_google_apis_connectivity(config) -> Dict[str, Any]:
         }
 
 
-async def check_redis_connectivity(redis_url: str, redis_token: str) -> Dict[str, Any]:
-    """Test Upstash Redis connectivity"""
-    try:
-        import httpx
-
-        # Test Redis with a simple PING command
-        headers = {"Authorization": f"Bearer {redis_token}"}
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{redis_url}/ping",
-                headers=headers,
-                timeout=5.0
-            )
-
-            if response.status_code == 200:
-                return {
-                    "status": "healthy",
-                    "message": "Redis accessible"
-                }
-            else:
-                return {
-                    "status": "unhealthy",
-                    "message": f"Redis returned status {response.status_code}"
-                }
-    except Exception as e:
-        logger.error(f"Redis health check failed: {str(e)}")
-        return {
-            "status": "unhealthy",
-            "message": f"Redis error: {str(e)}"
-        }
+# Redis health check removed - Redis is not used in this system
+# async def check_redis_connectivity(redis_url: str, redis_token: str) -> Dict[str, Any]:
+#     """Test Upstash Redis connectivity"""
+#     pass
 
 
 @router.get("/health/detailed")
@@ -143,17 +117,15 @@ async def detailed_health_check():
     - Google Drive API
     - Google Sheets API
     - Google Docs API
-    - Upstash Redis
     """
     from app.config import get_config
 
     config = get_config()
 
-    # Run all health checks in parallel
-    openai_check, google_check, redis_check = await asyncio.gather(
+    # Run all health checks in parallel (Redis removed)
+    openai_check, google_check = await asyncio.gather(
         check_openai_connectivity(config.openai_api_key),
         check_google_apis_connectivity(config),
-        check_redis_connectivity(config.upstash_redis_rest_url, config.upstash_redis_rest_token),
         return_exceptions=True
     )
 
@@ -162,14 +134,11 @@ async def detailed_health_check():
         openai_check = {"status": "unhealthy", "message": str(openai_check)}
     if isinstance(google_check, Exception):
         google_check = {"status": "unhealthy", "message": str(google_check)}
-    if isinstance(redis_check, Exception):
-        redis_check = {"status": "unhealthy", "message": str(redis_check)}
 
-    # Determine overall health
+    # Determine overall health (Redis check removed)
     all_healthy = (
         openai_check.get("status") == "healthy" and
-        google_check.get("status") == "healthy" and
-        redis_check.get("status") == "healthy"
+        google_check.get("status") == "healthy"
     )
 
     response = {
@@ -179,15 +148,11 @@ async def detailed_health_check():
         "version": "1.0.0",
         "dependencies": {
             "openai": openai_check,
-            "google_apis": google_check,
-            "redis": redis_check
+            "google_apis": google_check
         },
         "endpoints": {
-            "approve_pricing": "/webhooks/approve-pricing",
-            "approve_sow": "/webhooks/approve-sow",
             "google_drive_trigger": "/webhooks/google-drive-file-added",
-            "pricing_model_approved": "/webhooks/pricing-model-approved",
-            "watch_transcripts": "/cron/watch-transcripts"
+            "pricing_model_approved": "/webhooks/pricing-model-approved"
         }
     }
 
@@ -218,10 +183,9 @@ async def readiness_check():
     try:
         config = get_config()
 
-        # Quick validation that critical config is loaded
+        # Quick validation that critical config is loaded (Redis check removed)
         assert config.openai_api_key, "OpenAI API key not configured"
         assert config.tracker_sheet_id, "Tracker sheet ID not configured"
-        assert config.upstash_redis_rest_url, "Redis URL not configured"
 
         return {
             "status": "ready",
