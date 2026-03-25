@@ -55,9 +55,9 @@ class Config(BaseSettings):
     gmail_client_id: Optional[str] = None
     gmail_client_secret: Optional[str] = None
 
-    # === Upstash Redis Configuration ===
-    upstash_redis_rest_url: str
-    upstash_redis_rest_token: str
+    # === Upstash Redis Configuration (Optional - not used) ===
+    upstash_redis_rest_url: Optional[str] = None
+    upstash_redis_rest_token: Optional[str] = None
 
     # === Webhook URLs ===
     base_url: str = "http://localhost:8000"
