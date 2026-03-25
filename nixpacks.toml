@@ -1,16 +1,15 @@
 [phases.setup]
-nixPkgs = ["python311"]
-nixLibs = ["python311"]
+nixPkgs = ["python311", "python311Packages.pip", "python311Packages.virtualenv"]
 
 [phases.install]
 cmds = [
-  "python3.11 -m venv /app/.venv",
-  "source /app/.venv/bin/activate",
-  "cd aiir-sow-system && pip install --no-cache-dir -r requirements.txt"
+  "python3.11 --version",
+  "python3.11 -m pip install --upgrade pip",
+  "python3.11 -m pip install --no-cache-dir -r aiir-sow-system/requirements.txt"
 ]
 
 [phases.build]
-cmds = ["echo 'Build complete'"]
+cmds = ["echo 'Build complete - Python 3.11'"]
 
 [start]
-cmd = "cd aiir-sow-system && /app/.venv/bin/python -m uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000}"
+cmd = "cd aiir-sow-system && python3.11 -m uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000}"
