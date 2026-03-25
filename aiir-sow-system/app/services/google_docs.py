@@ -22,19 +22,28 @@ class GoogleDocsService:
     - Reading document content
     """
 
-    def __init__(self, credentials_path: str):
+    def __init__(self, credentials_path_or_service, drive_service=None):
         """
         Initialize Google Docs service
 
         Args:
-            credentials_path: Path to service account JSON file
+            credentials_path_or_service: Either a path to service account JSON file (str)
+                                        or a pre-built Google Docs service object
+            drive_service: Optional pre-built Google Drive service (needed for copying docs)
         """
-        self.credentials_path = credentials_path
-        self.docs_service = self._build_docs_service()
-        self.drive_service = self._build_drive_service()
+        if isinstance(credentials_path_or_service, str):
+            # Old behavior: build services from credentials file
+            self.credentials_path = credentials_path_or_service
+            self.docs_service = self._build_docs_service()
+            self.drive_service = self._build_drive_service()
+        else:
+            # New behavior: use pre-built services (from GoogleServicesManager)
+            self.docs_service = credentials_path_or_service
+            self.drive_service = drive_service  # Must be provided when using service objects
+            self.credentials_path = None
 
     def _build_docs_service(self):
-        """Build Google Docs API service"""
+        """Build Google Docs API service from credentials file"""
         SCOPES = ['https://www.googleapis.com/auth/documents']
         credentials = service_account.Credentials.from_service_account_file(
             self.credentials_path,
@@ -43,7 +52,7 @@ class GoogleDocsService:
         return build('docs', 'v1', credentials=credentials)
 
     def _build_drive_service(self):
-        """Build Google Drive API service for copying"""
+        """Build Google Drive API service from credentials file"""
         SCOPES = ['https://www.googleapis.com/auth/drive']
         credentials = service_account.Credentials.from_service_account_file(
             self.credentials_path,

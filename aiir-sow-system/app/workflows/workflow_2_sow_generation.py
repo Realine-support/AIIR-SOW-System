@@ -11,6 +11,7 @@ from app.services import (
     GoogleSheetsService,
     GoogleDocsService
 )
+from app.services.google_services import GoogleServicesManager
 from app.config import Config
 import logging
 
@@ -50,9 +51,11 @@ async def generate_sow_from_approval(
         logger.info(f"Starting SOW generation for engagement: {engagement_id}")
 
         # Initialize services (NO GMAIL, NO REDIS)
-        drive = GoogleDriveService(config.google_credentials_path)
-        sheets = GoogleSheetsService(config.google_credentials_path)
-        docs = GoogleDocsService(config.google_credentials_path)
+        # Use GoogleServicesManager to handle credentials (supports both JSON and file path)
+        google_manager = GoogleServicesManager(config)
+        drive = GoogleDriveService(google_manager.get_drive_service())
+        sheets = GoogleSheetsService(google_manager.get_sheets_service())
+        docs = GoogleDocsService(google_manager.get_docs_service(), google_manager.get_drive_service())
 
         # Step 1: Read engagement data from Tracker
         logger.info("Step 1: Reading engagement data from Tracker")

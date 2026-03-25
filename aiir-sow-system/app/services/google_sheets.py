@@ -22,18 +22,25 @@ class GoogleSheetsService:
     - Batch updates
     """
 
-    def __init__(self, credentials_path: str):
+    def __init__(self, credentials_path_or_service):
         """
         Initialize Google Sheets service
 
         Args:
-            credentials_path: Path to service account JSON file
+            credentials_path_or_service: Either a path to service account JSON file (str)
+                                        or a pre-built Google Sheets service object
         """
-        self.credentials_path = credentials_path
-        self.service = self._build_service()
+        if isinstance(credentials_path_or_service, str):
+            # Old behavior: build service from credentials file
+            self.credentials_path = credentials_path_or_service
+            self.service = self._build_service()
+        else:
+            # New behavior: use pre-built service (from GoogleServicesManager)
+            self.service = credentials_path_or_service
+            self.credentials_path = None
 
     def _build_service(self):
-        """Build Google Sheets API service"""
+        """Build Google Sheets API service from credentials file"""
         SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
         credentials = service_account.Credentials.from_service_account_file(
             self.credentials_path,

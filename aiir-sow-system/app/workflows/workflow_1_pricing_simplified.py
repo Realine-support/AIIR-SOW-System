@@ -27,6 +27,7 @@ from app.services import (
     GoogleDocsService,
     OpenAIService
 )
+from app.services.google_services import GoogleServicesManager
 from app.business_logic import calculate_pricing, generate_pricing_rationale
 from app.config import Config
 import logging
@@ -73,9 +74,11 @@ async def process_transcript_to_pricing_simplified(
         logger.info(f"[SIMPLIFIED WORKFLOW] Starting for transcript: {filename} (ID: {file_id})")
 
         # Initialize services (NO GMAIL, NO REDIS)
-        drive = GoogleDriveService(config.google_credentials_path)
-        sheets = GoogleSheetsService(config.google_credentials_path)
-        docs = GoogleDocsService(config.google_credentials_path)
+        # Use GoogleServicesManager to handle credentials (supports both JSON and file path)
+        google_manager = GoogleServicesManager(config)
+        drive = GoogleDriveService(google_manager.get_drive_service())
+        sheets = GoogleSheetsService(google_manager.get_sheets_service())
+        docs = GoogleDocsService(google_manager.get_docs_service(), google_manager.get_drive_service())
         openai_svc = OpenAIService(config.openai_api_key)
 
         # ====================
