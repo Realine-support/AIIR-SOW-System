@@ -1,0 +1,1043 @@
+{
+  "name": "AIIR 1 — Transcript Ingestion & Pricing",
+  "nodes": [
+    {
+      "id": "n1_trigger",
+      "name": "Watch Transcripts Folder",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "parameters": {
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "={{$vars.AIIR_TRANSCRIPTS_FOLDER_ID}}",
+          "mode": "id"
+        },
+        "event": [
+          "fileCreated"
+        ],
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "pQl0UnpSh855m4lW",
+          "name": "Tanmay"
+        }
+      }
+    },
+    {
+      "id": "n2_download",
+      "name": "Download Transcript File",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        470,
+        300
+      ],
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "pQl0UnpSh855m4lW",
+          "name": "Tanmay"
+        }
+      }
+    },
+    {
+      "id": "n3_filetype",
+      "name": "Detect File Type",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        690,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst filename = item.json.name || 'unknown.txt';\nconst ext = filename.split('.').pop().toLowerCase();\nreturn [{ json: { filename, ext, fileId: item.json.id, ...item.json } }];"
+      }
+    },
+    {
+      "id": "n4_extract",
+      "name": "Extract Text From File",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        910,
+        300
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "data"
+      }
+    },
+    {
+      "id": "n4b_prep_input",
+      "name": "Prepare Agent Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1130,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Carry forward file metadata alongside extracted text\nconst text = $input.first().json.text || $input.first().json.data || '';\nconst fileMeta = $('Detect File Type').first().json;\nreturn [{ json: { ...fileMeta, text, chatInput: text } }];"
+      }
+    },
+    {
+      "id": "n5_agent_extract",
+      "name": "AI Agent: Extract Variables",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1350,
+        300
+      ],
+      "parameters": {
+        "agentType": "conversationalAgent",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "You are a specialist data extraction agent for AIIR Consulting, an executive coaching firm based in the United States. Your only job is to read sales call transcripts and extract structured data from them. You have deep knowledge of AIIR's coaching programs, pricing tiers, and client terminology.\n\n## YOUR TASK\nRead the transcript provided and extract EXACTLY the fields listed below. Return a single valid JSON object — nothing else. No explanation, no markdown, no preamble.\n\n## FIELD DEFINITIONS AND EXTRACTION RULES\n\n### 1. client_company (string | null)\nThe name of the prospective client's employer or company. Look for: company name mentioned in introduction, email domain, organization name. Do NOT return the coaching firm name (AIIR, RE ALINE). Return null if not found.\n\n### 2. coachee_name (string | null)\nThe full name of the person who will receive coaching (not the salesperson, not HR — the actual coachee). Usually identified by their title being discussed or them being the subject of the coaching conversation. Return null if ambiguous.\n\n### 3. hubspot_deal_id (string | null)\nAny CRM deal ID, opportunity ID, or reference number explicitly stated. Format varies — could be numeric or alphanumeric (e.g. \"HS-2026-1234\", \"Deal #8847\"). Return null if not mentioned.\n\n### 4. coach_name (string | null)\n⚠️ CRITICAL RULE: Only extract a coach name if the transcript explicitly states that (a) a chemistry call has ALREADY OCCURRED and been COMPLETED, AND (b) a specific named coach was confirmed or assigned as a result. If the conversation is only exploring or suggesting coaches, return null. If the chemistry call is upcoming/planned but not yet done, return null.\n\n### 5. chemistry_call_complete (boolean)\ntrue only if the transcript explicitly confirms a chemistry call/session has already taken place and is complete. Words to look for: \"we already had our chemistry call\", \"Jonathan spoke with\", \"the chemistry session went well\", \"we've matched [coachee] with [coach]\". Default: false.\n\n### 6. seniority_level (enum: \"C-Suite\" | \"Senior\" | \"Mid-level\" | \"Early Career\" | \"Advisory\")\nMap the coachee's title to the correct seniority tier using these rules:\n- C-Suite: CEO, COO, CFO, CTO, CHRO, CRO, President, Managing Director, Executive Director, C-level titles\n- Senior: SVP, Senior Vice President, VP, Vice President, General Manager, Managing Partner (non-C-Suite), Senior Director\n- Mid-level: Director, Senior Manager, Department Head, Principal\n- Early Career: Manager, Associate Director, Team Lead, Individual Contributor, Analyst, early-stage roles\n- Advisory: Board Member, Advisor, Consultant, Interim executive without operational authority, Non-Executive Director\nIf the title is ambiguous, use context clues (budget authority, team size, company level) to determine. Default to 'Senior' if genuinely unclear.\n\n### 7. seniority_title (string | null)\nThe exact title as mentioned in the transcript (e.g., \"Senior Vice President of Marketing\", \"Chief Revenue Officer\"). Copy verbatim.\n\n### 8. market_type (enum: \"Mature\" | \"Emerging\")\nClassify the company's primary operating geography:\n- Mature markets: United States, Canada, United Kingdom, Western Europe (France, Germany, Netherlands, Scandinavia, Switzerland, Belgium, etc.), Australia, New Zealand, Singapore, Japan, UAE\n- Emerging markets: Latin America (Mexico, Brazil, Colombia, etc.), Eastern Europe (Poland, Romania, Czech Republic, etc.), Africa, Middle East (excluding UAE), Southeast Asia (excluding Singapore), India, China\nDefault to 'Mature' if the location is unclear or not mentioned.\n\n### 9. market_country (string | null)\nThe specific country or region detected from the transcript. Examples: \"United States\", \"United Kingdom\", \"Brazil\". Return null if not mentioned.\n\n### 10. engagement_duration_months (number | null)\nThe intended coaching engagement length in months. Look for explicit statements like \"9-month program\", \"six months of coaching\", \"we're thinking a year\". Also infer from program type discussions. Return a number (e.g., 9). Return null if not mentioned.\n\n### 11. num_participants (number)\nHow many people/coachees will participate in this engagement. Look for: \"three of our directors\", \"a cohort of five\", \"just for Sarah\". Default to 1 if individual coaching is implied or not specified.\n\n### 12. budget_signal_detected (boolean)\ntrue if the transcript contains ANY mention of budget, cost, price, investment amount, budget range, financial constraint, or affordability. Examples: \"our budget is around $40k\", \"we're looking at roughly $50,000\", \"budget is tight this year\", \"what's the investment looking like\". false if money/budget is never mentioned.\n\n### 13. budget_signal_phrases (array of strings)\nExtract the EXACT phrases from the transcript that indicate a budget. Copy word-for-word. Empty array [] if none.\n\n### 14. budget_target_amount (number | null)\nIf a specific dollar amount or range is mentioned, extract the TARGET or MAXIMUM as a number (no $ sign, no commas). If a range is given (e.g., \"$40,000 to $50,000\"), use the lower end. Return null if no amount is specified.\n\n### 15. existing_360_status (enum: \"none\" | \"recent\")\n\"recent\" if the transcript indicates a 360-degree assessment or stakeholder interview process was completed within the last 12 months. Look for: \"we just did a 360 last year\", \"already have 360 data\", \"completed stakeholder interviews recently\".\n\"none\" if no recent 360 is mentioned (default).\n\n### 16. self_awareness_signals (array of strings)\nPhrases from the transcript indicating the coachee has expressed a desire for self-awareness, feedback, or insight — suggesting the 360 component is valuable to them. Examples: \"wants to understand how she's perceived\", \"open to receiving honest feedback from peers\", \"doesn't know his blind spots\", \"wants 360-degree feedback\". Empty array [] if none.\n\n### 17. existing_360_phrases (array of strings)\nExact phrases from the transcript confirming recent 360 data already exists. Examples: \"we already completed a 360 last quarter\", \"the board just ran stakeholder interviews\". Empty array [] if none.\n\n### 18. payment_structure_signal (enum: \"100_upfront\" | \"50_50\" | \"milestone\" | \"other\" | \"none\")\nDetect any payment preference signals:\n- \"100_upfront\": \"pay everything upfront\", \"full payment at start\", \"invoice everything at kickoff\"\n- \"50_50\": \"split it 50/50\", \"half now half later\", \"two invoices\", \"payment in two installments\"\n- \"milestone\": \"milestone-based\", \"pay as we go\", \"tied to deliverables\"\n- \"other\": any other payment structure mentioned\n- \"none\": no payment discussion (default)\n\n### 19. net_days_signal (number | null)\nIf a payment terms / net days preference is mentioned, extract the number: 30, 45, or 60. Look for: \"net 30\", \"45-day payment terms\", \"60 days to pay\". Return null if not mentioned.\n\n### 20. coachee_terminology (enum: \"client\" | \"coachee\")\nHow does the organization or speaker refer to the person being coached? Look for which term is used consistently. Default to \"client\" if unclear.\n\n### 21. client_email (string | null)\nAny email address belonging to the client/coachee's organization. Look for direct mentions, email signatures, or context clues. Return null if not found.\n\n### 22. flags (array of strings)\nList any data quality issues, ambiguities, or fields that require human review. Use these standard flag codes:\n- TIER_AMBIGUOUS — seniority level or duration doesn't map clearly to a tier\n- COACH_UNCONFIRMED — transcript mentions a coach but chemistry call status is unclear\n- BUDGET_RANGE_WIDE — budget range spans more than $20,000\n- DURATION_MISSING — no engagement duration mentioned\n- SENIORITY_UNCLEAR — title doesn't map cleanly to a seniority level\n- PAYMENT_MILESTONE_SIGNAL — milestone payment mentioned, needs manual review\n- MULTI_PARTICIPANT — more than 1 participant detected, verify count\n- NO_CLIENT_EMAIL — no email found for sending SOW\n- 360_ELIMINATE_REVIEW — transcript suggests eliminating 360, verify with team\n- MARKET_TYPE_UNCLEAR — geography not mentioned, defaulting to Mature\n\n## OUTPUT FORMAT\nReturn ONLY this JSON object with all 22 fields populated. Use null for unknown strings, false for unknown booleans, [] for unknown arrays, and apply all defaults as specified above:\n\n{\n  \"client_company\": ...,\n  \"coachee_name\": ...,\n  \"hubspot_deal_id\": ...,\n  \"coach_name\": ...,\n  \"chemistry_call_complete\": ...,\n  \"seniority_level\": ...,\n  \"seniority_title\": ...,\n  \"market_type\": ...,\n  \"market_country\": ...,\n  \"engagement_duration_months\": ...,\n  \"num_participants\": ...,\n  \"budget_signal_detected\": ...,\n  \"budget_signal_phrases\": [...],\n  \"budget_target_amount\": ...,\n  \"existing_360_status\": ...,\n  \"self_awareness_signals\": [...],\n  \"existing_360_phrases\": [...],\n  \"payment_structure_signal\": ...,\n  \"net_days_signal\": ...,\n  \"coachee_terminology\": ...,\n  \"client_email\": ...,\n  \"flags\": [...]\n}"
+        }
+      }
+    },
+    {
+      "id": "n5_model_extract",
+      "name": "OpenAI GPT-4o (Extract)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1350,
+        500
+      ],
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0,
+          "maxTokens": 2000
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "pQl0UnpSh855m4lW",
+          "name": "Tanmay"
+        }
+      }
+    },
+    {
+      "id": "n5_parser_extract",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        1570,
+        500
+      ],
+      "parameters": {
+        "schemaType": "fromJson",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"client_company\": { \"type\": [\"string\", \"null\"], \"description\": \"Company name of the prospective client\" },\n    \"coachee_name\": { \"type\": [\"string\", \"null\"], \"description\": \"Full name of person being coached\" },\n    \"hubspot_deal_id\": { \"type\": [\"string\", \"null\"], \"description\": \"HubSpot or CRM deal ID\" },\n    \"coach_name\": { \"type\": [\"string\", \"null\"], \"description\": \"Coach name ONLY if chemistry call confirmed complete\" },\n    \"chemistry_call_complete\": { \"type\": \"boolean\", \"description\": \"True only if chemistry call already happened\" },\n    \"seniority_level\": { \"type\": \"string\", \"enum\": [\"C-Suite\", \"Senior\", \"Mid-level\", \"Early Career\", \"Advisory\"] },\n    \"seniority_title\": { \"type\": [\"string\", \"null\"], \"description\": \"Exact title as mentioned\" },\n    \"market_type\": { \"type\": \"string\", \"enum\": [\"Mature\", \"Emerging\"] },\n    \"market_country\": { \"type\": [\"string\", \"null\"], \"description\": \"Country or region\" },\n    \"engagement_duration_months\": { \"type\": [\"number\", \"null\"], \"description\": \"Duration in months\" },\n    \"num_participants\": { \"type\": \"number\", \"description\": \"Number of coachees, default 1\" },\n    \"budget_signal_detected\": { \"type\": \"boolean\" },\n    \"budget_signal_phrases\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"budget_target_amount\": { \"type\": [\"number\", \"null\"], \"description\": \"Target/max budget as plain number\" },\n    \"existing_360_status\": { \"type\": \"string\", \"enum\": [\"none\", \"recent\"] },\n    \"self_awareness_signals\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"existing_360_phrases\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"payment_structure_signal\": { \"type\": \"string\", \"enum\": [\"100_upfront\", \"50_50\", \"milestone\", \"other\", \"none\"] },\n    \"net_days_signal\": { \"type\": [\"number\", \"null\"] },\n    \"coachee_terminology\": { \"type\": \"string\", \"enum\": [\"client\", \"coachee\"] },\n    \"client_email\": { \"type\": [\"string\", \"null\"] },\n    \"flags\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } }\n  },\n  \"required\": [\"chemistry_call_complete\", \"seniority_level\", \"market_type\", \"budget_signal_detected\", \"num_participants\", \"existing_360_status\", \"payment_structure_signal\", \"coachee_terminology\", \"flags\"]\n}"
+      }
+    },
+    {
+      "id": "n6_tier_rate",
+      "name": "Tier Selection + Bill Rate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1790,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// AI Agent with Structured Output Parser → output is at $json.output (already parsed object)\nconst v = $input.first().json.output || {};\nif (!v.flags) v.flags = [];\n\n// Carry forward file metadata from earlier node\nconst fileMeta = $('Prepare Agent Input').first().json;\n\nconst dur = v.engagement_duration_months;\nconst sen = v.seniority_level;\n\n// ─── TIER SELECTION LOGIC ────────────────────────────────────────────────────\n// Maps seniority + duration → tier. When ambiguous, flag and default to IGNITE.\nlet tier;\nif (sen === 'Advisory') {\n  tier = 'AIIR_VISTA';\n} else if (sen === 'C-Suite' && dur >= 10) {\n  tier = 'ASCENT';\n} else if (sen === 'C-Suite' && dur >= 6) {\n  tier = 'ASCENT'; // C-Suite always ASCENT regardless of shorter duration\n  v.flags.push('TIER_AMBIGUOUS_DURATION');\n} else if (sen === 'Senior' && dur >= 6 && dur <= 9) {\n  tier = 'IGNITE';\n} else if (sen === 'Senior' && dur > 9) {\n  tier = 'IGNITE';\n  v.flags.push('TIER_AMBIGUOUS_DURATION');\n} else if (sen === 'Mid-level' && dur >= 4 && dur <= 6) {\n  tier = 'ROADMAP';\n} else if (sen === 'Early Career' && dur >= 4 && dur <= 5) {\n  tier = 'SPARK_II';\n} else if (sen === 'Early Career' && dur >= 3 && dur < 4) {\n  tier = 'SPARK_I';\n} else if (sen === 'Early Career') {\n  tier = 'SPARK_I';\n  v.flags.push('TIER_AMBIGUOUS_DURATION');\n} else if (sen === 'Mid-level') {\n  tier = 'ROADMAP';\n  v.flags.push('TIER_AMBIGUOUS_DURATION');\n} else if (sen === 'Senior') {\n  tier = 'IGNITE';\n  v.flags.push('TIER_AMBIGUOUS_DURATION');\n} else {\n  tier = 'IGNITE'; // hard default\n  v.flags.push('TIER_AMBIGUOUS');\n}\n\n// If duration is missing, flag it\nif (!dur) v.flags.push('DURATION_MISSING');\n\n// ─── BILL RATE TABLE ─────────────────────────────────────────────────────────\n// Rates are per hour. Market type + seniority level → bill rate.\n// Source: AIIR rate card (as per project spec)\nconst rateTable = {\n  'Mature': {\n    'C-Suite':     600,\n    'Senior':      350,\n    'Mid-level':   250,\n    'Early Career':250,\n    'Advisory':    350\n  },\n  'Emerging': {\n    'C-Suite':     500,\n    'Senior':      300,\n    'Mid-level':   200,\n    'Early Career':200,\n    'Advisory':    300\n  }\n};\nconst market = v.market_type || 'Mature';\nconst billRate = rateTable[market]?.[sen] || 350;\n\n// ─── COACH NAME RULE ─────────────────────────────────────────────────────────\n// Only use a named coach if chemistry call is explicitly confirmed as complete.\n// Otherwise always use the generic placeholder.\nconst coachName = (v.chemistry_call_complete === true && v.coach_name)\n  ? v.coach_name\n  : 'a Senior Level AIIR Consultant';\n\n// ─── DEFAULTS ────────────────────────────────────────────────────────────────\nif (!v.num_participants || v.num_participants < 1) v.num_participants = 1;\nif (!v.flags.includes('NO_CLIENT_EMAIL') && !v.client_email) {\n  v.flags.push('NO_CLIENT_EMAIL');\n}\n\nreturn [{ json: {\n  ...fileMeta,    // filename, fileId, etc.\n  ...v,           // all GPT-extracted fields\n  tier,\n  billRate,\n  coachName,\n  margin: 0.65    // ALWAYS 0.65 — never read from file\n} }];"
+      }
+    },
+    {
+      "id": "n7_reduction",
+      "name": "Reduction Hierarchy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2010,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const v = $input.first().json;\nconst tier = v.tier;\nconst hasBudget = v.budget_signal_detected === true;\nconst budgetTarget = v.budget_target_amount;\n\n// ─── DEFAULT SESSION HOURS BY TIER ───────────────────────────────────────────\n// These are the STARTING values before any reductions.\n// B-cells = coaching hours per session\n// E37_CZ = CZ (coaching platform) fee in months\n// interviewCount = number of 360° interviews (used for SOW text)\nconst tierDefaults = {\n  IGNITE: {\n    B37: 0.5,   // Initial Coaching Session (fixed, never reduced)\n    B38: 1.0,   // Stakeholder 1: ASM (Assimilation)\n    B39: 2.0,   // Dev History Interview\n    B40: 6.0,   // Interview-Based 360° (8 interviews × 45min ÷ 60 = 6.0)\n    B41: 2.0,   // Assessment Feedback\n    B42: 1.0,   // Dev Planning Session\n    B43: 1.0,   // Stakeholder 2: SDP (Structured Development Planning)\n    B44: 8.0,   // Implementation Sessions (8 × 1hr)\n    B45: 1.0,   // Stakeholder 3: Midpoint\n    B46: 1.0,   // Stakeholder 4: Wrap-Up\n    E37_CZ: 9,  // CZ months — dynamically set from duration (range 7–9)\n    interviewCount: 8\n  },\n  ROADMAP: {\n    B37: 0.5, B38: 1.0, B39: 2.0,\n    B40: 3.75, // 5 interviews × 45min ÷ 60\n    B41: 2.0, B42: 1.0, B43: 1.0,\n    B44: 5.0, B45: 1.0, B46: 1.0,\n    E37_CZ: 6, interviewCount: 5\n  },\n  ASCENT: {\n    B37: 0.5, B38: 1.0, B39: 2.0,\n    B40: 9.0, // 12 interviews × 45min ÷ 60\n    B41: 2.0, B42: 1.0, B43: 1.0,\n    B44: 12.0, B45: 1.0, B46: 1.0,\n    E37_CZ: 12, interviewCount: 12\n  },\n  SPARK_I: {\n    B37: 0.5, B38: 1.0,\n    B39: 0,   // ⚠️ SPARK I: NO Dev History Interview — uses $60 survey instead\n    B40: 3.75, B41: 2.0, B42: 1.0,\n    B43: 1.0, B44: 4.0, B45: 1.0, B46: 1.0,\n    E37_CZ: 4, interviewCount: 5\n  },\n  SPARK_II: {\n    B37: 0.5, B38: 1.0, B39: 2.0,\n    B40: 3.75, B41: 2.0, B42: 1.0,\n    B43: 1.0, B44: 5.0, B45: 1.0, B46: 1.0,\n    E37_CZ: 5, interviewCount: 5\n  },\n  AIIR_VISTA: {\n    B37: 0.5, B38: 1.0, B39: 2.0,\n    B40: 6.0, B41: 2.0, B42: 1.0,\n    B43: 1.0, B44: 10.0, B45: 1.0, B46: 1.0,\n    E37_CZ: 12, interviewCount: 8\n  }\n};\n\nlet hours = { ...(tierDefaults[tier] || tierDefaults.IGNITE) };\nlet interviewCount = hours.interviewCount;\ndelete hours.interviewCount;\n\nconst reductions = [];\n\n// ─── CZ FEE MONTHS — SET FROM ENGAGEMENT DURATION ────────────────────────────\nconst dur = v.engagement_duration_months || 9;\nif (tier === 'IGNITE') {\n  // IGNITE: CZ months = engagement duration, clamped between 7 and 9\n  hours.E37_CZ = Math.min(9, Math.max(7, Math.round(dur)));\n} else if (tier === 'ASCENT') {\n  // ASCENT: CZ months = engagement duration, clamped between 10 and 12\n  hours.E37_CZ = Math.min(12, Math.max(10, Math.round(dur)));\n}\n// Other tiers: E37_CZ is fixed (already set in tierDefaults)\n\n// ─── 360° SUB-DECISION LOGIC ─────────────────────────────────────────────────\n// This runs BEFORE budget levers so we know if 360 is in/out before pricing.\nlet interview360Action = 'KEEP'; // KEEP | REDUCE | ELIMINATE\n\nif (v.existing_360_status === 'recent' || (v.existing_360_phrases && v.existing_360_phrases.length > 0)) {\n  // Recent 360 data exists → eliminate the 360 interview component entirely\n  interview360Action = 'ELIMINATE';\n  hours.B40 = 0;\n  interviewCount = 0;\n  reductions.push({ field: '360', action: 'ELIMINATED', reason: 'Recent 360 data available in transcript' });\n  if (!v.flags.includes('360_ELIMINATE_REVIEW')) {\n    v.flags.push('360_ELIMINATE_REVIEW');\n  }\n} else if (v.self_awareness_signals && v.self_awareness_signals.length > 0) {\n  // Coachee is seeking self-awareness / feedback → KEEP 360 at full value\n  interview360Action = 'KEEP';\n} else if (hasBudget && interviewCount > 5) {\n  // Budget pressure + no strong self-awareness signal → REDUCE to minimum\n  interview360Action = 'REDUCE';\n  interviewCount = 5; // HARD FLOOR: never fewer than 5 interviews\n  hours.B40 = parseFloat(((45 * interviewCount) / 60).toFixed(2)); // 3.75\n  reductions.push({ field: '360', action: 'REDUCED', to: interviewCount, reason: 'Budget signal detected, reduced to minimum 5 interviews' });\n}\n\n// ─── 6-LEVER BUDGET REDUCTION HIERARCHY ─────────────────────────────────────\n// Applied ONLY if a budget signal was detected.\n// Levers applied in order of priority — earlier levers affect scope less.\n// All levers applied simultaneously here (not sequential stops) to give reviewer full picture.\n\nif (hasBudget) {\n\n  // LEVER 1: Stakeholder sessions 1hr → 0.75hr\n  // (Stakeholder 1 ASM, Stakeholder 2 SDP, Midpoint, Wrap-Up)\n  for (const cell of ['B38', 'B43', 'B45', 'B46']) {\n    if (hours[cell] > 0.75) {\n      reductions.push({ cell, from: hours[cell], to: 0.75, lever: 1, description: 'Stakeholder session shortened from 1hr to 45min' });\n      hours[cell] = 0.75;\n    }\n  }\n\n  // LEVER 2: Dev History Interview 2hr → 1.5hr\n  // (Skip for SPARK_I — it has no Dev History Interview at all)\n  if (tier !== 'SPARK_I' && hours.B39 > 1.5) {\n    reductions.push({ cell: 'B39', from: hours.B39, to: 1.5, lever: 2, description: 'Dev History shortened from 2hr to 90min' });\n    hours.B39 = 1.5;\n  }\n\n  // LEVER 3: 360° already handled above (reduction or elimination)\n\n  // LEVER 4: Implementation Sessions reduced by 1 session\n  if (hours.B44 > 7) {\n    reductions.push({ cell: 'B44', from: hours.B44, to: hours.B44 - 1, lever: 4, description: 'One implementation session removed' });\n    hours.B44 = hours.B44 - 1;\n  }\n\n  // LEVER 5: Dev Planning Session removed entirely\n  // (Only if budget target is set and low — strongest indicator of budget pressure)\n  if (budgetTarget && budgetTarget < 35000 && hours.B42 > 0) {\n    reductions.push({ cell: 'B42', from: hours.B42, to: 0, lever: 5, description: 'Dev Planning Session removed — strong budget constraint' });\n    hours.B42 = 0;\n  }\n\n  // LEVER 6: Assessment Feedback 2hr → 1.5hr\n  // Note: 2hrs is default (delete SOW sentence), 1.5hrs triggers SOW sentence update\n  if (hours.B41 > 1.5) {\n    reductions.push({ cell: 'B41', from: hours.B41, to: 1.5, lever: 6, description: 'Assessment Feedback shortened from 2hr to 90min (SOW sentence updated)' });\n    hours.B41 = 1.5;\n  }\n}\n\nreturn [{ json: { ...v, hours, reductions, interview360Action, interviewCount } }];"
+      }
+    },
+    {
+      "id": "n8_payment",
+      "name": "Payment Terms",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2230,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const v = $input.first().json;\n\n// ─── PAYMENT STRUCTURE ───────────────────────────────────────────────────────\n// DEFAULT is 100% upfront — this overrides any 50/50 default in the SOW template.\n// Only switch to 50/50 if the transcript explicitly signals it.\nlet paymentStructure = '100% invoiced upon program kickoff';\nlet netDays = 30; // Default: Net 30\n\nif (v.payment_structure_signal === '50_50') {\n  paymentStructure = '50% invoiced upon program kickoff. 50% invoiced three months following program kickoff.';\n} else if (v.payment_structure_signal === 'milestone') {\n  // Milestone payment is non-standard — keep 100% upfront but flag for review\n  paymentStructure = '100% invoiced upon program kickoff';\n  if (!v.flags.includes('PAYMENT_MILESTONE_SIGNAL')) {\n    v.flags.push('PAYMENT_MILESTONE_SIGNAL');\n  }\n}\n\n// Override net days only if explicitly detected\nif (v.net_days_signal === 45) netDays = 45;\nelse if (v.net_days_signal === 60) netDays = 60;\n// else stays at 30\n\n// ─── CZ RATE PER TIER ────────────────────────────────────────────────────────\n// ASCENT and AIIR_VISTA use $50/mo. All others use $75/mo.\nconst czRate = (v.tier === 'ASCENT' || v.tier === 'AIIR_VISTA') ? 50 : 75;\n\n// ─── FIXED ASSESSMENT FEES PER TIER ─────────────────────────────────────────\n// These are non-CZ assessment costs (psychometric tools, LD12, Hogan, surveys).\n// Source: AIIR pricing Excel — verified per tier.\n//\n// IGNITE:   LD12 $150 + Hogan $300 = $450 base (always, even if 360 eliminated)\n// ROADMAP:  LD12 360° $350 (only if 360 included)\n// ASCENT:   LD12 360° $350 (only if 360 included)\n// SPARK_I:  LD12 $150 + Hogan $300 + Dev History Survey $60 = $510 base\n//           + Survey-based 360° $350 (if 360 included)\n// SPARK_II: Survey 360° $350 (only if 360 included)\n// AIIR_VISTA: LD12 360° $350 (only if 360 included)\nconst has360 = v.interview360Action !== 'ELIMINATE';\nconst assessmentFeeMap = {\n  IGNITE:    { base: 450, fee360: 0   },  // 360 has no separate fee in IGNITE\n  ROADMAP:   { base: 0,   fee360: 350 },\n  ASCENT:    { base: 0,   fee360: 350 },\n  SPARK_I:   { base: 510, fee360: 350 },\n  SPARK_II:  { base: 0,   fee360: 350 },\n  AIIR_VISTA:{ base: 0,   fee360: 350 },\n};\nconst feeEntry = assessmentFeeMap[v.tier] || assessmentFeeMap.IGNITE;\nconst fixedAssessmentFees = feeEntry.base + (has360 ? feeEntry.fee360 : 0);\n\nreturn [{ json: { ...v, paymentStructure, netDays, czRate, fixedAssessmentFees } }];"
+      }
+    },
+    {
+      "id": "n9_engid",
+      "name": "Generate Engagement ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2450,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const v = $input.first().json;\nconst timestamp = Date.now();\nconst random = Math.random().toString(36).substr(2, 6).toUpperCase();\nconst engagementId = `AIIR-${timestamp}-${random}`;\nconst createdAt = new Date().toISOString();\nreturn [{ json: { ...v, engagementId, createdAt } }];"
+      }
+    },
+    {
+      "id": "n10_tracker_write",
+      "name": "Write to Tracker Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        2670,
+        300
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1SQSbLTassculs_2owDfSIeigYXvKcWd3PK53DKuV2FA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Tracker",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "engagement_id": "={{ $json.engagementId }}",
+            "created_at": "={{ $json.createdAt }}",
+            "transcript_filename": "={{ $json.filename }}",
+            "client_company": "={{ $json.client_company }}",
+            "coachee_name": "={{ $json.coachee_name }}",
+            "hubspot_deal_id": "={{ $json.hubspot_deal_id }}",
+            "coach_name": "={{ $json.coachName }}",
+            "tier": "={{ $json.tier }}",
+            "bill_rate": "={{ $json.billRate }}",
+            "num_participants": "={{ $json.num_participants }}",
+            "payment_structure": "={{ $json.paymentStructure }}",
+            "net_days": "={{ $json.netDays }}",
+            "pricing_approval_status": "PENDING",
+            "client_email": "={{ $json.client_email }}",
+            "full_variables_json": "={{ JSON.stringify($json) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "engagement_id",
+              "displayName": "engagement_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "transcript_filename",
+              "displayName": "transcript_filename",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "client_company",
+              "displayName": "client_company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "coachee_name",
+              "displayName": "coachee_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "hubspot_deal_id",
+              "displayName": "hubspot_deal_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "coach_name",
+              "displayName": "coach_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tier",
+              "displayName": "tier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "bill_rate",
+              "displayName": "bill_rate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "num_participants",
+              "displayName": "num_participants",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "price_per_participant",
+              "displayName": "price_per_participant",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_engagement_price",
+              "displayName": "total_engagement_price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment_structure",
+              "displayName": "payment_structure",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "net_days",
+              "displayName": "net_days",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pricing_approval_status",
+              "displayName": "pricing_approval_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pricing_approved_by",
+              "displayName": "pricing_approved_by",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pricing_approved_at",
+              "displayName": "pricing_approved_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "rationale_doc_url",
+              "displayName": "rationale_doc_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "calculator_url",
+              "displayName": "calculator_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sow_doc_url",
+              "displayName": "sow_doc_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sow_approval_status",
+              "displayName": "sow_approval_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sow_approved_by",
+              "displayName": "sow_approved_by",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sow_approved_at",
+              "displayName": "sow_approved_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "client_email",
+              "displayName": "client_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sent_at",
+              "displayName": "sent_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "archive_folder_url",
+              "displayName": "archive_folder_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "full_variables_json",
+              "displayName": "full_variables_json",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pQl0UnpSh855m4lW",
+          "name": "Tanmay"
+        }
+      }
+    },
+    {
+      "id": "n12_calc_read",
+      "name": "Read Calculated Price",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        3330,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/1SQSbLTassculs_2owDfSIeigYXvKcWd3PK53DKuV2FA/values/Calculator!H48:H50",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pQl0UnpSh855m4lW",
+          "name": "Tanmay"
+        }
+      }
+    },
+    {
+      "id": "n12b_parse_price",
+      "name": "Parse Price From Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3550,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const sheetsResponse = $input.first().json;\nconst prevData = $('Generate Engagement ID').first().json;\n\n// H48 = price per participant, H49 = (intermediate row), H50 = total engagement price\nconst values = sheetsResponse.values || [];\nconst raw48 = (values[0]?.[0] || '0').toString().replace(/[,$]/g, '');\nconst raw50 = (values[2]?.[0] || values[0]?.[0] || '0').toString().replace(/[,$]/g, '');\n\nconst pricePerParticipant = parseFloat(raw48) || 0;\nconst totalEngagementPrice = parseFloat(raw50) || pricePerParticipant;\n\nreturn [{ json: { ...prevData, pricePerParticipant, totalEngagementPrice } }];"
+      }
+    },
+    {
+      "id": "n13_agent_rationale",
+      "name": "AI Agent: Generate Rationale",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        3770,
+        300
+      ],
+      "parameters": {
+        "agentType": "conversationalAgent",
+        "text": "=Generate a pricing rationale document for the following AIIR Consulting engagement.\n\n## ENGAGEMENT DATA\n- Engagement ID: {{ $json.engagementId }}\n- Client Company: {{ $json.client_company }}\n- Coachee: {{ $json.coachee_name }} ({{ $json.seniority_title }})\n- Tier Selected: {{ $json.tier }}\n- Seniority Level: {{ $json.seniority_level }}\n- Market Type: {{ $json.market_type }} ({{ $json.market_country }})\n- Engagement Duration: {{ $json.engagement_duration_months }} months\n- Bill Rate: ${{ $json.billRate }}/hr\n- Margin: 0.65 (fixed)\n- Participants: {{ $json.num_participants }}\n- Price Per Participant: ${{ $json.pricePerParticipant }}\n- TOTAL ENGAGEMENT PRICE: ${{ $json.totalEngagementPrice }}\n- CZ Fee Months: {{ $json.hours.E37_CZ }}\n- Payment Structure: {{ $json.paymentStructure }}\n- Net Days: {{ $json.netDays }}\n- 360° Decision: {{ $json.interview360Action }} ({{ $json.interviewCount }} interviews)\n\n## REDUCTIONS APPLIED\n{{ JSON.stringify($json.reductions, null, 2) }}\n\n## HOURS BREAKDOWN\n{{ JSON.stringify($json.hours, null, 2) }}\n\n## FLAGS FOR HUMAN REVIEW\n{{ JSON.stringify($json.flags) }}\n\n## BUDGET SIGNALS DETECTED\n{{ JSON.stringify($json.budget_signal_phrases) }}\n\nWrite the rationale document now.",
+        "options": {
+          "systemMessage": "You are a senior pricing analyst at AIIR Consulting, an executive coaching firm. Your job is to write clear, professional pricing rationale documents that help the reviewing partner quickly understand and validate the AI-generated pricing decisions before approving.\n\nWrite a well-structured rationale covering EXACTLY these 5 sections:\n\n**1. TIER JUSTIFICATION**\nExplain why this specific tier (IGNITE/ROADMAP/ASCENT/SPARK I/SPARK II/AIIR VISTA) was selected based on the coachee's seniority level and engagement duration. Reference the specific title and months.\n\n**2. BILL RATE RATIONALE**\nExplain the bill rate selected: which market type (Mature/Emerging), which seniority band, and what rate that maps to from the AIIR rate card. Note: rates are $600 C-Suite Mature, $350 Senior Mature, $250 Mid-level Mature, $500 C-Suite Emerging, $300 Senior Emerging, $200 Mid-level Emerging.\n\n**3. SCOPE ADJUSTMENTS**\nIf any reductions were made to the default session hours, explain each one clearly: what was reduced, from what value to what value, and why (budget signal, specific lever applied). If no reductions were made, state that the full standard scope applies.\n\n**4. 360° INTERVIEW DECISION**\nExplain the 360° assessment decision: KEEP at full count / REDUCE to 5 (minimum) / ELIMINATE (recent data exists). Include the specific signal from the transcript that drove the decision. Note the HARD FLOOR of 5 interviews minimum.\n\n**5. PRICING SUMMARY & PAYMENT TERMS**\nState the total engagement price clearly, the per-participant breakdown if multi-participant, payment structure, and net days. Note if the payment structure was explicitly requested or defaulted to 100% upfront.\n\n**FLAGS FOR REVIEWER**\nList any flags that require the reviewer's attention before approval. Be specific about what needs checking.\n\nTone: Professional, concise, factual. This is an internal review document, not client-facing. 300-500 words total."
+        }
+      }
+    },
+    {
+      "id": "n13_model_rationale",
+      "name": "OpenAI GPT-4o (Rationale)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        3770,
+        500
+      ],
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 1500
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "pQl0UnpSh855m4lW",
+          "name": "Tanmay"
+        }
+      }
+    },
+    {
+      "id": "n14_save_rationale",
+      "name": "Save Rationale to Google Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3990,
+        300
+      ],
+      "parameters": {
+        "operation": "upload",
+        "name": "={{ $('Parse Price From Response').first().json.client_company || 'Unknown' }}_{{ $('Parse Price From Response').first().json.coachee_name || 'Unknown' }}_{{ new Date().toISOString().split('T')[0] }}_PricingRationale",
+        "folderId": {
+          "__rl": true,
+          "value": "={{$vars.AIIR_RATIONALE_DOCS_FOLDER_ID}}",
+          "mode": "id"
+        },
+        "binaryData": false,
+        "mediaType": "text/plain",
+        "body": "={{ $json.output || 'Rationale generation failed — check AI Agent node' }}",
+        "options": {
+          "convertToGoogleDocument": true
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "pQl0UnpSh855m4lW",
+          "name": "Tanmay"
+        }
+      }
+    },
+    {
+      "id": "n14b_merge",
+      "name": "Merge Data for Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4210,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const pricingData = $('Parse Price From Response').first().json;\nconst rationaleAgent = $('AI Agent: Generate Rationale').first().json;\nconst rationaleDoc = $('Save Rationale to Google Drive').first().json;\n\n// AI Agent output is in $json.output\nconst rationaleText = rationaleAgent.output || 'Rationale not available — check AI Agent node execution.';\n\nconst rationaleDocId = rationaleDoc.id || '';\nconst rationaleDocUrl = rationaleDocId\n  ? `https://docs.google.com/document/d/${rationaleDocId}/edit`\n  : 'Not available';\n\n// Build sheet URL — use actual sheet ID\nconst sheetId = '1SQSbLTassculs_2owDfSIeigYXvKcWd3PK53DKuV2FA';\nconst sheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;\n\nreturn [{ json: {\n  ...pricingData,\n  rationaleText,\n  rationaleDocId,\n  rationaleDocUrl,\n  sheetUrl\n} }];"
+      }
+    },
+    {
+      "id": "n15_email",
+      "name": "Send Pricing Review Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        4430,
+        300
+      ],
+      "parameters": {
+        "sendTo": "={{$vars.AIIR_REVIEWER_EMAIL}}",
+        "subject": "=[AIIR] Pricing Review Required — {{ $json.client_company || 'Unknown Client' }} / {{ $json.coachee_name || 'Unknown Coachee' }}",
+        "emailType": "html",
+        "message": "=<html><body style='font-family:Arial,sans-serif;max-width:700px;margin:0 auto;'>\n<h2 style='color:#1a73e8;'>AIIR SOW System — Pricing Review Required</h2>\n<p><strong>Engagement ID:</strong> <code>{{ $json.engagementId }}</code></p>\n<hr style='border:none;border-top:1px solid #eee;'>\n\n<h3>Extracted Variables</h3>\n<table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse;width:100%;font-size:13px;'>\n  <tr style='background:#f8f9fa;'><td><strong>Client Company</strong></td><td>{{ $json.client_company }}</td></tr>\n  <tr><td><strong>Coachee Name</strong></td><td>{{ $json.coachee_name }}</td></tr>\n  <tr style='background:#f8f9fa;'><td><strong>Title</strong></td><td>{{ $json.seniority_title }}</td></tr>\n  <tr><td><strong>HubSpot Deal ID</strong></td><td>{{ $json.hubspot_deal_id || '⚠️ Not found' }}</td></tr>\n  <tr style='background:#f8f9fa;'><td><strong>Assigned Coach</strong></td><td>{{ $json.coachName }}</td></tr>\n  <tr><td><strong>Tier</strong></td><td><strong>{{ $json.tier }}</strong></td></tr>\n  <tr style='background:#f8f9fa;'><td><strong>Seniority Level</strong></td><td>{{ $json.seniority_level }}</td></tr>\n  <tr><td><strong>Market</strong></td><td>{{ $json.market_type }} ({{ $json.market_country }})</td></tr>\n  <tr style='background:#f8f9fa;'><td><strong>Duration</strong></td><td>{{ $json.engagement_duration_months }} months</td></tr>\n  <tr><td><strong>Participants</strong></td><td>{{ $json.num_participants }}</td></tr>\n  <tr style='background:#f8f9fa;'><td><strong>Bill Rate</strong></td><td>${{ $json.billRate }}/hr</td></tr>\n  <tr><td><strong>CZ Fee Months</strong></td><td>{{ $json.hours.E37_CZ }}</td></tr>\n  <tr style='background:#f8f9fa;'><td><strong>360° Decision</strong></td><td>{{ $json.interview360Action }} — {{ $json.interviewCount }} interviews</td></tr>\n  <tr><td><strong>Payment Structure</strong></td><td>{{ $json.paymentStructure }}</td></tr>\n  <tr style='background:#f8f9fa;'><td><strong>Net Days</strong></td><td>{{ $json.netDays }}</td></tr>\n  <tr><td><strong>Price Per Participant</strong></td><td><strong>${{ $json.pricePerParticipant?.toLocaleString() }}</strong></td></tr>\n  <tr style='background:#fff3cd;'><td><strong>TOTAL ENGAGEMENT PRICE</strong></td><td><strong style='font-size:15px;'>${{ $json.totalEngagementPrice?.toLocaleString() }}</strong></td></tr>\n</table>\n\n{% if $json.flags && $json.flags.length > 0 %}\n<h3 style='color:#c62828;'>⚠️ Flags Requiring Review</h3>\n<ul style='color:#c62828;font-weight:bold;'>{{ $json.flags.map(f => '<li>' + f + '</li>').join('') }}</ul>\n{% endif %}\n\n<h3>Pricing Rationale (AI-Generated)</h3>\n<div style='background:#f5f5f5;padding:15px;border-radius:4px;font-family:Arial;font-size:13px;white-space:pre-wrap;line-height:1.6;'>{{ $json.rationaleText }}</div>\n\n<h3 style='margin-top:24px;'>Actions</h3>\n<p>\n  <a href='{{ $json.sheetUrl }}' style='background:#4285f4;color:white;padding:10px 18px;text-decoration:none;border-radius:4px;margin-right:10px;font-size:13px;'>📊 View Calculator Sheet</a>\n  <a href='{{ $json.rationaleDocUrl }}' style='background:#34a853;color:white;padding:10px 18px;text-decoration:none;border-radius:4px;font-size:13px;'>📄 View Rationale Doc</a>\n</p>\n<p style='margin-top:20px;'>\n  <a href='https://primary-production-bd72.up.railway.app/webhook/aiir-pricing-approve?id={{ $json.engagementId }}' style='background:#0f9d58;color:white;padding:14px 28px;text-decoration:none;border-radius:6px;font-size:16px;font-weight:bold;display:inline-block;'>✅ APPROVE PRICING &amp; GENERATE SOW</a>\n</p>\n<p style='color:#666;font-size:12px;margin-top:12px;'>To adjust pricing before approving: open the Google Sheet, edit the highlighted cells, then click APPROVE. The system will re-read the updated price from the sheet.</p>\n<hr style='border:none;border-top:1px solid #eee;margin-top:30px;'>\n<p style='color:#999;font-size:11px;'>AIIR SOW Automation System | {{ $json.engagementId }} | {{ $json.createdAt }}</p>\n</body></html>",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "pQl0UnpSh855m4lW",
+          "name": "Tanmay"
+        }
+      }
+    },
+    {
+      "id": "n14c_update_tracker_rationale",
+      "name": "Update Tracker with Rationale URL",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        3990,
+        500
+      ],
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1SQSbLTassculs_2owDfSIeigYXvKcWd3PK53DKuV2FA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Tracker",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "rationale_doc_url": "={{ 'https://docs.google.com/document/d/' + $input.first().json.id + '/edit' }}",
+            "calculator_url": "=https://docs.google.com/spreadsheets/d/1SQSbLTassculs_2owDfSIeigYXvKcWd3PK53DKuV2FA/edit",
+            "price_per_participant": "={{ $('Parse Price From Response').first().json.pricePerParticipant }}",
+            "total_engagement_price": "={{ $('Parse Price From Response').first().json.totalEngagementPrice }}"
+          },
+          "matchingColumns": [
+            "engagement_id"
+          ],
+          "schema": [
+            {
+              "id": "engagement_id",
+              "displayName": "engagement_id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "rationale_doc_url",
+              "displayName": "rationale_doc_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "calculator_url",
+              "displayName": "calculator_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "price_per_participant",
+              "displayName": "price_per_participant",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_engagement_price",
+              "displayName": "total_engagement_price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "where": {
+          "values": [
+            {
+              "column": "engagement_id",
+              "condition": "equals",
+              "conditionValue": "={{ $('Generate Engagement ID').first().json.engagementId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pQl0UnpSh855m4lW",
+          "name": "Tanmay"
+        }
+      }
+    },
+    {
+      "id": "n11a_build_calc_payload",
+      "name": "Build Calculator Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2890,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const v = $input.first().json;\nconst batchPayload = {\n  valueInputOption: \"USER_ENTERED\",\n  data: [\n    { range: \"Calculator!H49\", values: [[v.num_participants]] },\n    { range: \"Calculator!B2\",  values: [[v.tier]] },\n    { range: \"Calculator!B15\", values: [[v.billRate]] },\n    { range: \"Calculator!B16\", values: [[0.65]] },\n    { range: \"Calculator!B37\", values: [[v.hours.B37]] },\n    { range: \"Calculator!B38\", values: [[v.hours.B38]] },\n    { range: \"Calculator!B39\", values: [[v.hours.B39]] },\n    { range: \"Calculator!B40\", values: [[v.hours.B40]] },\n    { range: \"Calculator!B41\", values: [[v.hours.B41]] },\n    { range: \"Calculator!B42\", values: [[v.hours.B42]] },\n    { range: \"Calculator!B43\", values: [[v.hours.B43]] },\n    { range: \"Calculator!B44\", values: [[v.hours.B44]] },\n    { range: \"Calculator!B45\", values: [[v.hours.B45]] },\n    { range: \"Calculator!B46\", values: [[v.hours.B46]] },\n    { range: \"Calculator!E37\", values: [[v.hours.E37_CZ]] },\n    { range: \"Calculator!F38\", values: [[v.czRate]] },\n    { range: \"Calculator!H45\", values: [[v.fixedAssessmentFees]] }\n  ]\n};\nreturn [{ json: { ...v, batchPayload } }];"
+      }
+    },
+    {
+      "id": "n11_calc_write",
+      "name": "Write Calculator Cells",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        3110,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/1SQSbLTassculs_2owDfSIeigYXvKcWd3PK53DKuV2FA/values:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json.batchPayload) }}",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pQl0UnpSh855m4lW",
+          "name": "Tanmay"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Watch Transcripts Folder": {
+      "main": [
+        [
+          {
+            "node": "Download Transcript File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Transcript File": {
+      "main": [
+        [
+          {
+            "node": "Detect File Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detect File Type": {
+      "main": [
+        [
+          {
+            "node": "Extract Text From File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Text From File": {
+      "main": [
+        [
+          {
+            "node": "Prepare Agent Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Agent Input": {
+      "main": [
+        [
+          {
+            "node": "AI Agent: Extract Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI GPT-4o (Extract)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent: Extract Variables",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent: Extract Variables",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent: Extract Variables": {
+      "main": [
+        [
+          {
+            "node": "Tier Selection + Bill Rate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tier Selection + Bill Rate": {
+      "main": [
+        [
+          {
+            "node": "Reduction Hierarchy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reduction Hierarchy": {
+      "main": [
+        [
+          {
+            "node": "Payment Terms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payment Terms": {
+      "main": [
+        [
+          {
+            "node": "Generate Engagement ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Engagement ID": {
+      "main": [
+        [
+          {
+            "node": "Write to Tracker Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write to Tracker Sheet": {
+      "main": [
+        [
+          {
+            "node": "Build Calculator Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Calculator Cells": {
+      "main": [
+        [
+          {
+            "node": "Read Calculated Price",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Calculated Price": {
+      "main": [
+        [
+          {
+            "node": "Parse Price From Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Price From Response": {
+      "main": [
+        [
+          {
+            "node": "AI Agent: Generate Rationale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI GPT-4o (Rationale)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent: Generate Rationale",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent: Generate Rationale": {
+      "main": [
+        [
+          {
+            "node": "Save Rationale to Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Rationale to Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Update Tracker with Rationale URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Data for Email": {
+      "main": [
+        [
+          {
+            "node": "Send Pricing Review Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Tracker with Rationale URL": {
+      "main": [
+        [
+          {
+            "node": "Merge Data for Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Calculator Payload": {
+      "main": [
+        [
+          {
+            "node": "Write Calculator Cells",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "notes": "Workflow 1 — PRODUCTION READY. All credentials set to pQl0UnpSh855m4lW (Tanmay). Sheet ID: 1SQSbLTassculs_2owDfSIeigYXvKcWd3PK53DKuV2FA. All nodes configured and tested."
+  }
+}

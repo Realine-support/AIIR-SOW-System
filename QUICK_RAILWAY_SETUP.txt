@@ -1,0 +1,147 @@
+# ===================================================================
+# QUICK RAILWAY DEPLOYMENT - STEP BY STEP GUIDE
+# ===================================================================
+# Everything you need to deploy AIIR SOW System to Railway
+# ===================================================================
+
+## STEP 1: Deploy to Railway (2 minutes)
+1. Go to https://railway.app
+2. Click "New Project"
+3. Select "Deploy from GitHub repo"
+4. Choose: Realine-support/AIIR-SOW-System
+5. Railway will auto-detect Python and start deploying
+6. Wait for deployment to complete
+7. COPY YOUR RAILWAY URL (e.g., https://aiir-sow-system-production.up.railway.app)
+
+## STEP 2: Add Environment Variables (5 minutes)
+
+### Method A: Bulk Upload (FASTEST - Recommended)
+1. Go to Railway → Your Project → Variables Tab
+2. Click "Raw Editor" button
+3. Open file: D:\AIIR\RAILWAY_ENV_VARIABLES.txt
+4. Copy lines 9-48 (all the actual variables, not the comments)
+5. Paste into Railway Raw Editor
+6. Click "Save"
+
+### Method B: Manual Upload
+1. Go to Railway → Your Project → Variables Tab
+2. Click "New Variable"
+3. Open file: D:\AIIR\RAILWAY_ENV_VARIABLES.txt
+4. Add each variable one by one
+
+## STEP 3: Add Google Credentials (2 minutes)
+1. Go to Railway → Your Project → Variables Tab
+2. Click "New Variable"
+3. Variable Name: GOOGLE_CREDENTIALS_JSON
+4. Open file: D:\AIIR\GOOGLE_CREDENTIALS_FOR_RAILWAY.txt
+5. Copy the ENTIRE JSON line (the super long line starting with {"type":...)
+6. Paste as the value
+7. Click "Save"
+
+## STEP 4: Add Railway URL Variables (1 minute)
+Now that you have your Railway URL, add these 3 variables:
+
+1. Go to Railway → Variables Tab
+2. Add these variables (replace YOUR-RAILWAY-URL with your actual URL):
+
+   Variable Name: BASE_URL
+   Value: https://YOUR-RAILWAY-URL.up.railway.app
+
+   Variable Name: APPROVE_PRICING_WEBHOOK_URL
+   Value: https://YOUR-RAILWAY-URL.up.railway.app/webhooks/approve-pricing
+
+   Variable Name: APPROVE_SOW_WEBHOOK_URL
+   Value: https://YOUR-RAILWAY-URL.up.railway.app/webhooks/approve-sow
+
+## STEP 5: Update n8n Webhook URL (2 minutes)
+1. Open your n8n workflow: "Google Drive → FastAPI Webhook"
+2. Click on "POST to FastAPI Webhook" node
+3. Update the URL:
+   FROM: REPLACE_WITH_YOUR_NGROK_URL/webhooks/google-drive-file-added
+   TO: https://YOUR-RAILWAY-URL.up.railway.app/webhooks/google-drive-file-added
+4. Save the workflow
+5. Activate the workflow (toggle switch ON)
+
+## STEP 6: Test Your Deployment (3 minutes)
+
+### Test 1: Health Check
+Open in browser: https://YOUR-RAILWAY-URL.up.railway.app/health
+
+Expected response:
+{
+  "status": "healthy",
+  "endpoints": {...}
+}
+
+### Test 2: Webhook Test
+Open in browser: https://YOUR-RAILWAY-URL.up.railway.app/webhooks/google-drive-file-added/test
+
+Expected response:
+{
+  "status": "online",
+  "endpoint": "/webhooks/google-drive-file-added",
+  ...
+}
+
+### Test 3: End-to-End Test
+1. Make sure n8n workflow is ACTIVE
+2. Upload a test transcript file to Google Drive folder
+3. Wait 1 minute
+4. Check n8n execution logs (should show success)
+5. Check Tracker sheet: https://docs.google.com/spreadsheets/d/1_9faJK4jCs-jhbKyI1HuF01CCzY6H3DlzUQKuhSUYtU
+6. Check Calculator sheet: https://docs.google.com/spreadsheets/d/1YpiNSVidnsp8fMQ0DOxE4SxC-NdjxwtksJz-9jYd0QM
+
+## STEP 7: Monitor Logs
+1. Railway → Your Project → Deployments → Logs
+2. Look for:
+   - "Application startup complete"
+   - "Uvicorn running on..."
+   - POST requests to /webhooks/google-drive-file-added
+
+===================================================================
+FILES CREATED FOR YOU:
+===================================================================
+📄 D:\AIIR\RAILWAY_ENV_VARIABLES.txt
+   → Contains all environment variables with actual values
+   → Copy-paste into Railway
+
+📄 D:\AIIR\GOOGLE_CREDENTIALS_FOR_RAILWAY.txt
+   → Contains Google Service Account JSON
+   → Add as GOOGLE_CREDENTIALS_JSON variable
+
+📄 D:\AIIR\aiir-sow-system\RAILWAY_DEPLOYMENT_GUIDE.md
+   → Complete detailed deployment guide
+   → Already pushed to GitHub
+
+===================================================================
+CHECKLIST - Mark as you complete:
+===================================================================
+[ ] Railway project created
+[ ] Code deployed from GitHub
+[ ] Railway URL copied
+[ ] All environment variables added (from RAILWAY_ENV_VARIABLES.txt)
+[ ] Google credentials added (from GOOGLE_CREDENTIALS_FOR_RAILWAY.txt)
+[ ] BASE_URL, APPROVE_PRICING_WEBHOOK_URL, APPROVE_SOW_WEBHOOK_URL added
+[ ] n8n HTTP Request URL updated with Railway URL
+[ ] n8n workflow saved and activated
+[ ] Health check endpoint works
+[ ] Test endpoint works
+[ ] End-to-end test successful (file → n8n → Railway → Sheets)
+[ ] Tracker sheet updated with test data
+[ ] Calculator sheet updated with test data
+
+===================================================================
+🎉 YOU'RE LIVE IN PRODUCTION!
+===================================================================
+
+Your system will now automatically:
+✅ Detect new transcripts in Google Drive
+✅ Extract client information using AI
+✅ Calculate pricing based on business rules
+✅ Update Tracker and Calculator sheets
+✅ Generate SOW documents
+✅ Send approval emails
+✅ Archive completed engagements
+
+Happy automating! 🚀
+===================================================================

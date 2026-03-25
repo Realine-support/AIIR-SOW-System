@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIIR SOW Automation — Complete System Blueprint</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;0,700;1,300&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg: #f7f5f0;
+  --surface: #ffffff;
+  --surface2: #f0ede6;
+  --border: #e2ddd4;
+  --ink: #1a1714;
+  --ink2: #4a443c;
+  --ink3: #8a8178;
+  --accent: #c8420a;
+  --accent2: #2a6b3c;
+  --accent3: #1a4a7a;
+  --accent4: #7a3a1a;
+  --gold: #b8860b;
+  --tag-bg: #1a1714;
+  --tag-text: #f7f5f0;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+header {
+  background: var(--ink);
+  color: var(--bg);
+  padding: 36px 52px 32px;
+  position: relative;
+  overflow: hidden;
+}
+header::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 220px; height: 220px;
+  border: 1px solid rgba(247,245,240,0.08);
+  border-radius: 50%;
+}
+header::after {
+  content: '';
+  position: absolute;
+  top: -80px; right: -80px;
+  width: 320px; height: 320px;
+  border: 1px solid rgba(247,245,240,0.04);
+  border-radius: 50%;
+}
+.header-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+header h1 {
+  font-family: 'Fraunces', serif;
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #f7f5f0;
+  max-width: 700px;
+}
+header h1 em {
+  font-style: italic;
+  font-weight: 300;
+  color: rgba(247,245,240,0.6);
+}
+.header-meta {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.chip {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  padding: 4px 12px;
+  border-radius: 2px;
+  border: 1px solid;
+}
+.chip-red   { color: #e8805a; border-color: #e8805a; }
+.chip-green { color: #5aaa6a; border-color: #5aaa6a; }
+.chip-blue  { color: #6a9ada; border-color: #6a9ada; }
+.chip-gold  { color: #d4a840; border-color: #d4a840; }
+
+/* ── NAV TABS ── */
+nav {
+  background: var(--surface);
+  border-bottom: 2px solid var(--border);
+  padding: 0 52px;
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+}
+.tab {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 16px 22px;
+  cursor: pointer;
+  color: var(--ink3);
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  white-space: nowrap;
+  transition: all 0.18s;
+}
+.tab:hover { color: var(--ink2); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── CONTENT PANELS ── */
+.panel { display: none; padding: 40px 52px 60px; }
+.panel.active { display: block; }
+
+/* ── SECTION HEADERS ── */
+.section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── FLOW DIAGRAM ── */
+#flow-panel .mermaid {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 36px;
+  overflow-x: auto;
+}
+.flow-note {
+  background: #fff8e8;
+  border: 1px solid #e8d080;
+  border-left: 4px solid var(--gold);
+  border-radius: 4px;
+  padding: 14px 18px;
+  margin-bottom: 24px;
+  font-size: 13px;
+  color: #5a4a10;
+  line-height: 1.6;
+}
+
+/* ── STEPS GRID ── */
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
+}
+.step-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 22px 24px;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.step-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 12px rgba(200,66,10,0.08);
+}
+.step-card.corrected { border-left: 3px solid var(--accent); }
+.step-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--ink3);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.step-title {
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+.step-body { font-size: 13px; color: var(--ink2); line-height: 1.65; }
+.step-body ul { list-style: none; margin-top: 8px; }
+.step-body ul li { padding: 2px 0; }
+.step-body ul li::before { content: '→ '; color: var(--accent); font-family: 'DM Mono', monospace; }
+.step-body code {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--accent2);
+}
+.correction-badge {
+  display: inline-block;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  background: var(--accent);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 2px;
+  margin-left: 8px;
+  vertical-align: middle;
+  text-transform: uppercase;
+}
+
+/* ── TIER CARDS ── */
+.tiers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+}
+.tier-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.tier-header {
+  padding: 14px 20px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tier-header.ignite  { background: #1a1714; color: #f7f5f0; }
+.tier-header.roadmap { background: #1a3a5a; color: #e8f0f8; }
+.tier-header.ascent  { background: #1a3a2a; color: #e8f5ec; }
+.tier-header.spark1  { background: #5a2a0a; color: #f8ede8; }
+.tier-header.spark2  { background: #4a2a5a; color: #f0e8f8; }
+.tier-header.vista   { background: #3a2a0a; color: #f8f0e8; }
+
+.tier-body { padding: 18px 20px; }
+.tier-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  gap: 12px;
+}
+.tier-row:last-child { border-bottom: none; }
+.tier-label { color: var(--ink3); flex-shrink: 0; font-family: 'DM Mono', monospace; font-size: 11px; }
+.tier-value { color: var(--ink); font-weight: 500; text-align: right; }
+.tier-value code {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--accent2);
+  background: var(--surface2);
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+.tier-diff { color: var(--accent); font-size: 10px; font-family: 'DM Mono', monospace; }
+
+/* ── KEYWORDS ── */
+.kw-section { margin-bottom: 36px; }
+.kw-group {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 20px 22px;
+  margin-bottom: 12px;
+}
+.kw-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kw-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.kw-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.kw-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 3px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--ink2);
+}
+
+/* ── VARIABLES TABLE ── */
+.var-table-wrap { overflow-x: auto; margin-bottom: 36px; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+thead tr { background: var(--ink); color: var(--bg); }
+th {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 12px 14px;
+  text-align: left;
+  white-space: nowrap;
+}
+td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.55; }
+td:first-child { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent2); white-space: nowrap; }
+tr:hover td { background: var(--surface2); }
+.cell-ref { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent3); background: #e8f0f8; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+.rule-note { font-size: 11px; color: var(--ink3); font-style: italic; }
+.corrected-row td { border-left: 3px solid var(--accent); }
+
+/* ── HIERARCHY ── */
+.lever-list { display: flex; flex-direction: column; gap: 14px; }
+.lever {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+}
+.lever-num {
+  width: 54px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Fraunces', serif;
+  font-size: 28px;
+  font-weight: 700;
+}
+.lever-num.l1 { background: #c8420a; color: white; }
+.lever-num.l2 { background: #b8650a; color: white; }
+.lever-num.l3 { background: #2a6b3c; color: white; }
+.lever-num.l3b { background: #1a5a3a; color: white; font-size: 16px; }
+.lever-num.l4 { background: #1a4a7a; color: white; }
+.lever-num.l5 { background: #5a5a5a; color: white; }
+.lever-body { padding: 18px 22px; flex: 1; }
+.lever-title {
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.lever-meta {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--ink3);
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+.lever-desc { font-size: 13px; color: var(--ink2); line-height: 1.65; }
+.lever-desc strong { color: var(--ink); }
+.lever-special {
+  background: #fff8e8;
+  border: 1px solid #e8d080;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #5a4a10;
+  margin-top: 10px;
+  line-height: 1.55;
+}
+
+/* ── SOW MAP ── */
+.sow-stage {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.sow-stage-header {
+  padding: 12px 20px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  color: var(--ink2);
+}
+.sow-row {
+  display: grid;
+  grid-template-columns: 220px 1fr 200px;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+  align-items: start;
+}
+.sow-row:last-child { border-bottom: none; }
+.sow-field { font-weight: 600; color: var(--ink); }
+.sow-rule { color: var(--ink2); line-height: 1.6; font-size: 12px; }
+.sow-trigger { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent3); line-height: 1.6; }
+.sow-row.dynamic { background: #f0f8f0; }
+.sow-row.static { background: #f8f8f8; }
+.sow-row.corrected { background: #fff8f5; border-left: 3px solid var(--accent); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .panel { padding: 24px 20px 40px; }
+  nav { padding: 0 20px; }
+  header { padding: 24px 20px; }
+  .sow-row { grid-template-columns: 1fr; gap: 4px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-eyebrow">RE ALINE × AIIR Consulting</div>
+  <h1>SOW Automation System <em>— Complete Blueprint</em></h1>
+  <div class="header-meta">
+    <span class="chip chip-red">All 12 Errors Corrected</span>
+    <span class="chip chip-green">All 6 Tiers Mapped</span>
+    <span class="chip chip-blue">Every Excel Cell Referenced</span>
+    <span class="chip chip-gold">Every SOW Field Mapped</span>
+  </div>
+</header>
+
+<nav>
+  <div class="tab active" onclick="showTab('flow')">System Flow</div>
+  <div class="tab" onclick="showTab('steps')">Step-by-Step Logic</div>
+  <div class="tab" onclick="showTab('tiers')">All 6 Tiers</div>
+  <div class="tab" onclick="showTab('excel')">Excel Cell Map</div>
+  <div class="tab" onclick="showTab('sow')">SOW Field Map</div>
+  <div class="tab" onclick="showTab('keywords')">Keywords & Signals</div>
+  <div class="tab" onclick="showTab('hierarchy')">Reduction Hierarchy</div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════ FLOW ═══ -->
+<div id="flow-panel" class="panel active">
+  <div class="section-label">End-to-End System Flow</div>
+  <div class="flow-note">
+    ⚠️ <strong>Corrected from previous version:</strong> Payment default is 100% upfront (not 50/50). Margin default is 65% (not 70%). Each tier has structurally different sessions — SPARK I has no Dev History interview. ROADMAP includes LD12 360° while IGNITE uses interview-based 360° only. Bill rate depends on market type + seniority level.
+  </div>
+  <div class="mermaid">
+flowchart TD
+    A([🚀 TRIGGER\nNew transcript uploaded to Google Drive folder]) --> B
+
+    B[📄 Ingest & Parse Transcript\nFireflies · Zoom · Manual] --> C{Readable\n& non-empty?}
+    C -- No --> C1[🚨 Alert team · Stop]
+    C -- Yes --> D
+
+    D[🔍 Extract Core Variables\nfrom transcript NLP] --> D1["• Client name & company
+• HubSpot Deal ID → header + footer
+• Coach name — only if post-chemistry call
+• Leadership level / seniority
+• Market type: Mature or Emerging
+• Engagement duration signals
+• Number of participants
+• Budget signals & price anchors
+• Existing 360 / assessment status
+• Client preferred term: 'client' or 'coachee'"]
+
+    D1 --> E
+
+    E[🎯 Select Coaching Tier] --> E1{Leadership level\n& duration signals}
+    E1 -- "C-Suite / 10-12 months" --> T1[ASCENT\n30.5 hrs · 12 CZ months · $50 CZ rate]
+    E1 -- "Senior / 6-9 months" --> T2[IGNITE\n23.5 hrs · 9 CZ months · $75 CZ rate]
+    E1 -- "Mid-level / 4-6 months" --> T3[ROADMAP\n13 hrs · 6 CZ months · $75 CZ rate]
+    E1 -- "Early career / 3-4 months" --> T4[SPARK I\n7 hrs · 4 CZ months · $75 CZ rate]
+    E1 -- "Early career / 4-5 months" --> T5[SPARK II\n10.5 hrs · 5 CZ months · $75 CZ rate]
+    E1 -- "Executive advisory" --> T6[AIIR VISTA\n6 or 12 months · $50 CZ rate]
+    T1 & T2 & T3 & T4 & T5 & T6 --> BR
+
+    BR[💵 Set Bill Rate — Cell B15] --> BR1{Market type\n+ seniority?}
+    BR1 -- "Mature · Tier 1 / Senior" --> BR2[$350/hr]
+    BR1 -- "Mature · Tier 2" --> BR3[$250/hr]
+    BR1 -- "Mature · C-Suite" --> BR4[$600/hr]
+    BR1 -- "Emerging · Tier 1" --> BR5[$300/hr]
+    BR1 -- "Emerging · Tier 2" --> BR6[$200/hr]
+    BR1 -- "Emerging · C-Suite" --> BR7[$500/hr]
+    BR2 & BR3 & BR4 & BR5 & BR6 & BR7 --> MR
+
+    MR[📊 Set Margin — Cell B16\nDefault: 65%\n⚠️ File currently shows 70% — use 65%] --> F
+
+    F[💰 Budget Signal Detection\nScan transcript for cost constraint keywords] --> F2{Budget constraint\ndetected?}
+    F2 -- No --> G[Use all default hours\nfor selected tier]
+    F2 -- Yes --> F3[Extract budget target\nor constraint amount]
+    F3 --> H
+
+    H[⚙️ Apply Reduction Hierarchy\nMegan's priority order — IGNITE example] --> H1
+
+    H1["LEVER 1 — Stakeholder Sessions
+Default: 1hr each → Reduce to 45min → Min: 30min
+Cells: B38, B43, B45, B46 (IGNITE)"] --> H2
+
+    H2["LEVER 2 — Dev History Interview
+Default: 2hrs → Min: 90min — NEVER below 90min
+Cell: B39 (IGNITE)  |  Note: SPARK I has NO interview"] --> H3
+
+    H3["LEVER 3 — Interview-Based 360°
+Default: 8×45min=6hrs → Min: 5×45min=3.75hrs
+Cell: B40 (IGNITE) — see 360° sub-logic below"] --> Z1
+
+    Z1{"360° Sub-Logic\nSelf-awareness signals\nin transcript?"}
+    Z1 -- "YES → KEEP full 360" --> ZK[Keep 8 interviews\n= 6 hrs default]
+    Z1 -- "NO → Check existing 360" --> Z4{Existing 360\nalready done?}
+    Z4 -- "YES → ELIMINATE" --> ZE[Set B40 = 0\nUpdate SOW: remove 360 row\nChange 'three streams' → 'two streams']
+    Z4 -- "NO signals" --> ZD[Keep 8 interviews\n= 6 hrs default]
+    ZK & ZE & ZD --> H4
+
+    H4["LEVER 4 — Implementation Sessions
+Default: 8 sessions (IGNITE) → Reduce to 7
+Cell: B44 — always 1hr each, reduce COUNT only"] --> H5
+
+    H5["LEVER 5 — Dev Planning Session — LAST RESORT A
+Default: 1hr → Can be fully removed (Min: 0hrs)
+Cell: B42 — Megan 'tends to always keep it'"] --> H6
+
+    H6["LEVER 6 — Assessment Feedback — LAST RESORT B
+Default: 2hrs → Min: 90min — NEVER below 90min
+Cell: B41 — Megan strongly resists cutting this"] --> G
+
+    G --> I
+
+    I[📊 Write Values to Excel\nAll cells per selected tier] --> I2
+
+    I2["Excel auto-calculates:
+Total Hours (B47) = sum all session hours
+Coach Cost (B48) = B47 × B15 bill rate
+PM Fee (B49) = B48 × 12%
+Total Services (B50) = B48 + B49
+Client Price per Person (H48) = SUM assessments + H47
+Total Engagement (H50) = H48 × E49 participants
+SOW Price ← H50 (or H48 if 1 participant)"]
+
+    I2 --> J
+
+    J[💳 Payment Terms Detection] --> J1{"Payment structure\nsignal?"}
+    J1 -- "No signal" --> JP1[DEFAULT: 100% upfront\nat kickoff\n⚠️ NOT 50/50]
+    J1 -- "50/50 signal" --> JP2[50% kickoff\n50% at month 3]
+    J1 -- "Other structure" --> JP3[Per transcript signal]
+    JP1 & JP2 & JP3 --> J2
+
+    J2{"Net payment\nday signal?"}
+    J2 -- "No signal" --> JD1[DEFAULT: 30 days]
+    J2 -- "45 days" --> JD2[45 days\n⚠️ Requires CFO approval]
+    JD1 & JD2 --> K
+
+    K[📋 Generate Pricing Draft\nWith annotated rationale per change] --> L
+
+    L[👤 Human Reviews Pricing\nTeam member in Excel/Google Sheet] --> L1{Approved?}
+    L1 -- No --> L2[Human adjusts manually]
+    L2 --> L1
+    L1 -- Yes → trigger --> N
+
+    N[📝 Populate SOW Template\nInject all variables into placeholders] --> N2
+
+    N2["Apply special rules:
+✗ NEVER change boilerplate intro paragraph
+✗ NEVER change confidentiality/cancellation policies
+• Update 'four stakeholder meetings' if reduced to 3
+• Update coach name only if post-chemistry call
+• Update client name in 3 places: body + 2× signature block
+• Update 360 count in deliverables table
+• Update 'three streams' → 'two streams' if 360 eliminated
+• Update Dev History duration or remove duration mention
+• Update Assessment Feedback duration if reduced
+• Update Development Planning duration if reduced
+• Update Implementation session count in table
+• Match 'client' vs 'coachee' to transcript usage"]
+
+    N2 --> O[👤 Human Reviews SOW Draft] --> O1{Approved?}
+    O1 -- No --> O2[Human edits in Google Docs]
+    O2 --> O1
+    O1 -- Yes --> P
+
+    P[✅ SOW Finalized] --> Q[📧 Send to Client\nEmail or DocuSign]
+    Q --> R[📁 Archive to Client Master Folder\nUpdate HubSpot deal status]
+    R --> S([🏁 COMPLETE])
+
+    style A fill:#1a1714,color:#f7f5f0,stroke:#1a1714
+    style S fill:#2a6b3c,color:#fff,stroke:#2a6b3c
+    style C1 fill:#c8420a,color:#fff,stroke:#c8420a
+    style MR fill:#7a3a0a,color:#fff,stroke:#7a3a0a
+    style L fill:#1a4a7a,color:#fff,stroke:#1a4a7a
+    style O fill:#1a4a7a,color:#fff,stroke:#1a4a7a
+    style P fill:#2a6b3c,color:#fff,stroke:#2a6b3c
+    style ZE fill:#c8420a,color:#fff,stroke:#c8420a
+    style Z1 fill:#b8650a,color:#fff,stroke:#b8650a
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ STEPS ═══ -->
+<div id="steps-panel" class="panel">
+  <div class="section-label">Step-by-Step Logic — All Corrections Applied</div>
+  <div class="steps-grid">
+
+    <div class="step-card">
+      <div class="step-num">Step 01</div>
+      <div class="step-title">🚀 Trigger</div>
+      <div class="step-body">New transcript file uploaded to a designated Google Drive folder triggers the automation. Supports Fireflies auto-upload, Zoom recordings, or manual uploads. File must be readable text (txt, docx, pdf).</div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num">Step 02</div>
+      <div class="step-title">📄 Ingest & Validate</div>
+      <div class="step-body">Parse transcript to raw text. Validate it is non-empty and readable. If invalid, alert team and stop. No further steps run on a bad file.</div>
+    </div>
+
+    <div class="step-card corrected">
+      <div class="step-num">Step 03</div>
+      <div class="step-title">🔍 Extract Core Variables <span class="correction-badge">Updated</span></div>
+      <div class="step-body">NLP extraction of all key variables:
+        <ul>
+          <li>Client name (used in 3 SOW locations)</li>
+          <li>HubSpot Deal ID → header AND footer</li>
+          <li>Coach name (only post-chemistry call)</li>
+          <li>Leadership seniority level</li>
+          <li><strong>Market type: Mature or Emerging</strong> — affects bill rate</li>
+          <li>Duration signals (months)</li>
+          <li>Number of participants → <code>E49</code></li>
+          <li>Budget signals & price anchors</li>
+          <li>Existing 360 / assessment status</li>
+          <li>'Client' vs 'coachee' terminology</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step-card corrected">
+      <div class="step-num">Step 04</div>
+      <div class="step-title">🎯 Select Coaching Tier <span class="correction-badge">Updated</span></div>
+      <div class="step-body">Each tier has structurally different sessions — not just different hours. SPARK I has no Dev History interview at all. ROADMAP includes LD12 360° assessment. ASCENT & VISTA use $50 CZ rate. See Tiers tab for full breakdown.
+        <ul>
+          <li>ASCENT — C-Suite, 10–12 months</li>
+          <li>IGNITE — Senior, 6–9 months</li>
+          <li>ROADMAP — Mid-level, 4–6 months</li>
+          <li>SPARK I — Early career, 3–4 months</li>
+          <li>SPARK II — Early career, 4–5 months</li>
+          <li>AIIR VISTA — Executive advisory, 6 or 12 mo</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step-card corrected">
+      <div class="step-num">Step 05</div>
+      <div class="step-title">💵 Set Bill Rate — <code>B15</code> <span class="correction-badge">New Step</span></div>
+      <div class="step-body">Bill rate is a manual input — not automatic. Must detect both market type AND seniority from transcript, then write to <code>B15</code>:
+        <ul>
+          <li>Mature + Tier 1/Senior → <strong>$350/hr</strong></li>
+          <li>Mature + Tier 2 → $250/hr</li>
+          <li>Mature + C-Suite → $600/hr</li>
+          <li>Emerging + Tier 1 → $300/hr</li>
+          <li>Emerging + Tier 2 → $200/hr</li>
+          <li>Emerging + C-Suite → $500/hr</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step-card corrected">
+      <div class="step-num">Step 06</div>
+      <div class="step-title">📊 Set Margin — <code>B16</code> <span class="correction-badge">Corrected</span></div>
+      <div class="step-body">Default margin is <strong>65%</strong> (0.65), not 70%. The Excel file currently has 70% (0.7) but Andrew's comment on cell B16 explicitly flags Megan uses 65%. Write <code>0.65</code> to <code>B16</code> as the default unless a different margin is agreed with the client.</div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num">Step 07</div>
+      <div class="step-title">💰 Budget Signal Detection</div>
+      <div class="step-body">Keyword scan of transcript for cost constraint signals. If detected, extract the target budget amount. If no signals found, use all default hours for the selected tier. See Keywords tab for full list.</div>
+    </div>
+
+    <div class="step-card corrected">
+      <div class="step-num">Step 08</div>
+      <div class="step-title">⚙️ Apply Reduction Hierarchy <span class="correction-badge">Updated</span></div>
+      <div class="step-body">Apply reductions in Megan's priority order. 6 levers total — not 5. Development Planning Session was previously missing as a separate lever. See Hierarchy tab.
+        <ul>
+          <li>1. Stakeholder sessions → first</li>
+          <li>2. Dev History Interview → second</li>
+          <li>3. 360° Interviews → third (with sub-tree)</li>
+          <li>4. Implementation Sessions → fourth</li>
+          <li>5. Dev Planning Session → last resort A (can remove entirely)</li>
+          <li>6. Assessment Feedback → last resort B</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step-card corrected">
+      <div class="step-num">Step 08b</div>
+      <div class="step-title">🔄 360° Sub-Logic <span class="correction-badge">Updated</span></div>
+      <div class="step-body">Minimum is <strong>5 interviews</strong> — hard floor (not "5-6"). Two reduction types: reduce time per interview (45→30 min) OR reduce count (8→5 min). Eliminate entirely only if existing 360 data available. If eliminated: set <code>B40=0</code> AND update SOW "three streams" → "two streams."</div>
+    </div>
+
+    <div class="step-card corrected">
+      <div class="step-num">Step 09</div>
+      <div class="step-title">📊 Write to Excel <span class="correction-badge">Updated</span></div>
+      <div class="step-body">Write to tier-specific cells. <code>E49</code> (# participants) is blank — must be populated. SOW price comes from <code>H50</code> (H48 × E49). If single participant, H48 = H50. See Excel Cell Map tab for every cell per tier.</div>
+    </div>
+
+    <div class="step-card corrected">
+      <div class="step-num">Step 10</div>
+      <div class="step-title">💳 Payment Terms Detection <span class="correction-badge">Corrected</span></div>
+      <div class="step-body">Default is <strong>100% upfront at kickoff</strong> — NOT 50/50. The 50/50 split is only applied when the client explicitly negotiates it. 45-day net terms require CFO approval. 30 days is the default net term.</div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num">Step 11</div>
+      <div class="step-title">📋 Generate Pricing Draft</div>
+      <div class="step-body">Produce human-readable pricing summary with annotated rationale for every change made — which keyword triggered it, what changed, and what the new price is. Sent to team for review before SOW generation.</div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num">Step 12</div>
+      <div class="step-title">👤 Human Review — Pricing</div>
+      <div class="step-body">Team member reviews AI-generated pricing in Excel/Google Sheet. Can manually adjust any cell. Must explicitly approve (button click, status cell, or file move) before SOW generation is triggered.</div>
+    </div>
+
+    <div class="step-card corrected">
+      <div class="step-num">Step 13</div>
+      <div class="step-title">📝 Populate SOW Template <span class="correction-badge">Updated</span></div>
+      <div class="step-body">Inject variables. Client name appears in <strong>3 separate locations</strong> (body paragraph, policy section ×2, signature block). See SOW Field Map tab for exact rules per field. Key rules:
+        <ul>
+          <li>Boilerplate intro → NEVER change</li>
+          <li>Policies → NEVER change</li>
+          <li>If 360 eliminated → "two streams" not three</li>
+          <li>Dev History duration → update or remove mention</li>
+          <li>Assessment Feedback → update if 90 min OR delete sentence if 2hr</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num">Step 14</div>
+      <div class="step-title">👤 Human Review — SOW</div>
+      <div class="step-body">Team reviews full SOW draft in Google Docs or Word. Edits directly if needed. Final approval triggers send to client.</div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num">Step 15</div>
+      <div class="step-title">📧 Send & Archive</div>
+      <div class="step-body">Approved SOW sent to client via email or DocuSign. Archived to Client Master Folder in Google Drive with standardized naming. HubSpot deal status updated.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ TIERS ═══ -->
+<div id="tiers-panel" class="panel">
+  <div class="section-label">All 6 Coaching Tiers — Structural Differences</div>
+  <div class="tiers-grid">
+
+    <div class="tier-card">
+      <div class="tier-header ignite">IGNITE <span style="opacity:0.6;font-size:10px">Senior · 6-9 months</span></div>
+      <div class="tier-body">
+        <div class="tier-row"><span class="tier-label">CZ months (E37)</span><span class="tier-value">9 months</span></div>
+        <div class="tier-row"><span class="tier-label">CZ rate (F37)</span><span class="tier-value">$75/month</span></div>
+        <div class="tier-row"><span class="tier-label">Initial session (B37)</span><span class="tier-value">0.5 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 1 ASM (B38)</span><span class="tier-value">1 hr · min 30min</span></div>
+        <div class="tier-row"><span class="tier-label">Dev History (B39)</span><span class="tier-value">2 hrs · min 90min</span></div>
+        <div class="tier-row"><span class="tier-label">360° (B40)</span><span class="tier-value">8×45min = 6hrs · min 5×45=3.75hr</span></div>
+        <div class="tier-row"><span class="tier-label">LD12 360° (E38)</span><span class="tier-value">0 — NOT included</span></div>
+        <div class="tier-row"><span class="tier-label">LD12 (E39)</span><span class="tier-value">1 — included</span></div>
+        <div class="tier-row"><span class="tier-label">Hogan (E40)</span><span class="tier-value">1 — included (HPI+HDS+MVPI)</span></div>
+        <div class="tier-row"><span class="tier-label">TES (E41)</span><span class="tier-value">Optional (blank default)</span></div>
+        <div class="tier-row"><span class="tier-label">Asmt Feedback (B41)</span><span class="tier-value">2 hrs · min 90min</span></div>
+        <div class="tier-row"><span class="tier-label">Dev Planning (B42)</span><span class="tier-value">1 hr · min 0 (removable)</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 2 SDP (B43)</span><span class="tier-value">1 hr · min 30min</span></div>
+        <div class="tier-row"><span class="tier-label">Implementation (B44)</span><span class="tier-value">8 sessions × 1hr = 8 hrs</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 3 Midpoint (B45)</span><span class="tier-value">1 hr · min 30min</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 4 Wrap-Up (B46)</span><span class="tier-value">1 hr · min 30min</span></div>
+        <div class="tier-row"><span class="tier-label">Participants (E49)</span><span class="tier-value" style="color:var(--accent)">⚠️ BLANK — must enter</span></div>
+        <div class="tier-row"><span class="tier-label">SOW Price cell</span><span class="tier-value"><code>H50</code> (= H48 × E49)</span></div>
+        <div class="tier-row"><span class="tier-label">Total hrs default</span><span class="tier-value">23–23.5 hrs · min 17.25</span></div>
+      </div>
+    </div>
+
+    <div class="tier-card">
+      <div class="tier-header roadmap">ROADMAP <span style="opacity:0.6;font-size:10px">Mid-level · 4-6 months</span></div>
+      <div class="tier-body">
+        <div class="tier-row"><span class="tier-label">CZ months (E21)</span><span class="tier-value">6 months</span></div>
+        <div class="tier-row"><span class="tier-label">CZ rate (F21)</span><span class="tier-value">$75/month</span></div>
+        <div class="tier-row"><span class="tier-label">Initial session (B21)</span><span class="tier-value">0.5 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 1 ASM (B22)</span><span class="tier-value">1 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Dev History (B23)</span><span class="tier-value tier-diff">1.5 hrs default (not 2hr)</span></div>
+        <div class="tier-row"><span class="tier-label">360° type</span><span class="tier-value tier-diff">No interview 360° — uses LD12 360° survey</span></div>
+        <div class="tier-row"><span class="tier-label">LD12 360° (E22)</span><span class="tier-value tier-diff">1 — INCLUDED (unlike IGNITE)</span></div>
+        <div class="tier-row"><span class="tier-label">Asmt Feedback (B24)</span><span class="tier-value">2 hrs</span></div>
+        <div class="tier-row"><span class="tier-label">Dev Planning (B25)</span><span class="tier-value">1 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 2 SDP (B26)</span><span class="tier-value">1 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Implementation (B27)</span><span class="tier-value tier-diff">5 sessions (not 8)</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 3 Wrap-Up (B28)</span><span class="tier-value tier-diff">Only 3 stakeholder meetings total (no Midpoint)</span></div>
+        <div class="tier-row"><span class="tier-label">Participants (E31)</span><span class="tier-value" style="color:var(--accent)">⚠️ BLANK — must enter</span></div>
+        <div class="tier-row"><span class="tier-label">SOW Price cell</span><span class="tier-value"><code>H32</code> (= H30 × E31)</span></div>
+      </div>
+    </div>
+
+    <div class="tier-card">
+      <div class="tier-header ascent">ASCENT <span style="opacity:0.6;font-size:10px">C-Suite · 10-12 months</span></div>
+      <div class="tier-body">
+        <div class="tier-row"><span class="tier-label">CZ months (E55)</span><span class="tier-value">12 months</span></div>
+        <div class="tier-row"><span class="tier-label">CZ rate (F55)</span><span class="tier-value tier-diff">$50/month (not $75)</span></div>
+        <div class="tier-row"><span class="tier-label">Initial session (B55)</span><span class="tier-value">0.5 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 1 ASM (B56)</span><span class="tier-value">1 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Dev History (B57)</span><span class="tier-value">2 hrs</span></div>
+        <div class="tier-row"><span class="tier-label">360° (B58)</span><span class="tier-value tier-diff">12×45min = 9 hrs (more interviews)</span></div>
+        <div class="tier-row"><span class="tier-label">LD12 360° (E56)</span><span class="tier-value">1 — included</span></div>
+        <div class="tier-row"><span class="tier-label">Asmt Feedback (B59)</span><span class="tier-value">2 hrs</span></div>
+        <div class="tier-row"><span class="tier-label">Dev Planning (B60)</span><span class="tier-value">1 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 2 SDP (B61)</span><span class="tier-value">1 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Implementation (B62)</span><span class="tier-value tier-diff">12 sessions (not 8)</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 3 Midpoint (B63)</span><span class="tier-value">1 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 4 Wrap-Up (B64)</span><span class="tier-value">1 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Participants (E67)</span><span class="tier-value" style="color:var(--accent)">⚠️ BLANK — must enter</span></div>
+        <div class="tier-row"><span class="tier-label">SOW Price cell</span><span class="tier-value"><code>H68</code> (= H66 × E67)</span></div>
+        <div class="tier-row"><span class="tier-label">Bill rate note</span><span class="tier-value">C-Suite → $600/hr (mature) or $500/hr (emerging)</span></div>
+      </div>
+    </div>
+
+    <div class="tier-card">
+      <div class="tier-header spark1">SPARK I <span style="opacity:0.6;font-size:10px">Early career · 3-4 months</span></div>
+      <div class="tier-body">
+        <div class="tier-row"><span class="tier-label">CZ months (E73)</span><span class="tier-value">4 months</span></div>
+        <div class="tier-row"><span class="tier-label">CZ rate (F73)</span><span class="tier-value">$75/month</span></div>
+        <div class="tier-row"><span class="tier-label">Initial session (B73)</span><span class="tier-value">0.5 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 1 ASM (B74)</span><span class="tier-value tier-diff">0.5 hr (not 1hr)</span></div>
+        <div class="tier-row"><span class="tier-label">Dev History Interview</span><span class="tier-value tier-diff">❌ DOES NOT EXIST in SPARK I</span></div>
+        <div class="tier-row"><span class="tier-label">Dev History Survey (E77)</span><span class="tier-value tier-diff">Survey only · $60 flat fee (not coached interview)</span></div>
+        <div class="tier-row"><span class="tier-label">360° type</span><span class="tier-value tier-diff">Survey-based 360° (not interview-based)</span></div>
+        <div class="tier-row"><span class="tier-label">Asmt Feedback (B75)</span><span class="tier-value tier-diff">1.5 hrs default (not 2hr)</span></div>
+        <div class="tier-row"><span class="tier-label">Dev Planning (B76)</span><span class="tier-value">1 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Implementation (B77)</span><span class="tier-value tier-diff">3 sessions (not 8)</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 2 Wrap-Up (B78)</span><span class="tier-value tier-diff">Only 2 stakeholder meetings total</span></div>
+        <div class="tier-row"><span class="tier-label">Participants (E83)</span><span class="tier-value" style="color:var(--accent)">⚠️ BLANK — must enter</span></div>
+        <div class="tier-row"><span class="tier-label">SOW Price cell</span><span class="tier-value"><code>H84</code> (= H82 × E83)</span></div>
+      </div>
+    </div>
+
+    <div class="tier-card">
+      <div class="tier-header spark2">SPARK II <span style="opacity:0.6;font-size:10px">Early career · 4-5 months</span></div>
+      <div class="tier-body">
+        <div class="tier-row"><span class="tier-label">CZ months (E91)</span><span class="tier-value">5 months</span></div>
+        <div class="tier-row"><span class="tier-label">CZ rate (F91)</span><span class="tier-value">$75/month</span></div>
+        <div class="tier-row"><span class="tier-label">Initial session (B91)</span><span class="tier-value">0.5 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 1 ASM (B92)</span><span class="tier-value tier-diff">0.5 hr (not 1hr)</span></div>
+        <div class="tier-row"><span class="tier-label">Dev History (B93)</span><span class="tier-value tier-diff">1.0 hr (not 2hr — shorter interview)</span></div>
+        <div class="tier-row"><span class="tier-label">360° type</span><span class="tier-value tier-diff">Survey-based 360° (not interview-based)</span></div>
+        <div class="tier-row"><span class="tier-label">Asmt Feedback (B94)</span><span class="tier-value tier-diff">1.5 hrs default (not 2hr)</span></div>
+        <div class="tier-row"><span class="tier-label">Dev Planning (B95)</span><span class="tier-value">1 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 2 SDP (B96)</span><span class="tier-value tier-diff">0.5 hr (not 1hr)</span></div>
+        <div class="tier-row"><span class="tier-label">Implementation (B97)</span><span class="tier-value tier-diff">5 sessions (not 8)</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 3 Wrap-Up (B98)</span><span class="tier-value tier-diff">3 stakeholder meetings total (no Midpoint)</span></div>
+        <div class="tier-row"><span class="tier-label">Participants (E101)</span><span class="tier-value" style="color:var(--accent)">⚠️ BLANK — must enter</span></div>
+        <div class="tier-row"><span class="tier-label">SOW Price cell</span><span class="tier-value"><code>H102</code> (= H100 × E101)</span></div>
+      </div>
+    </div>
+
+    <div class="tier-card">
+      <div class="tier-header vista">AIIR VISTA <span style="opacity:0.6;font-size:10px">Executive Advisory · 6 or 12 months</span></div>
+      <div class="tier-body">
+        <div class="tier-row"><span class="tier-label">CZ months (E107/E125)</span><span class="tier-value">6 or 12 months</span></div>
+        <div class="tier-row"><span class="tier-label">CZ rate (F107)</span><span class="tier-value tier-diff">$50/month (not $75)</span></div>
+        <div class="tier-row"><span class="tier-label">Kickoff session (B107)</span><span class="tier-value tier-diff">"Kick-off Meeting" not "Initial Coaching Session"</span></div>
+        <div class="tier-row"><span class="tier-label">Dev History (B109)</span><span class="tier-value tier-diff">3 hrs (not 2hr)</span></div>
+        <div class="tier-row"><span class="tier-label">360° (B110)</span><span class="tier-value">8×45min = 6 hrs</span></div>
+        <div class="tier-row"><span class="tier-label">Asmt Feedback (B111)</span><span class="tier-value">2 hrs</span></div>
+        <div class="tier-row"><span class="tier-label">Dev Planning (B112)</span><span class="tier-value">1 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 2 SDP (B113)</span><span class="tier-value">1 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Implementation (B114)</span><span class="tier-value">8 sessions</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 3 Midpoint (B115)</span><span class="tier-value">1 hr</span></div>
+        <div class="tier-row"><span class="tier-label">Stakeholder 4 Wrap-Up (B116)</span><span class="tier-value">1 hr</span></div>
+        <div class="tier-row"><span class="tier-label">6mo Participants (E119)</span><span class="tier-value" style="color:var(--accent)">⚠️ BLANK — must enter</span></div>
+        <div class="tier-row"><span class="tier-label">SOW Price (6mo)</span><span class="tier-value"><code>H120</code> (= H118 × E119)</span></div>
+        <div class="tier-row"><span class="tier-label">12mo Participants (E137)</span><span class="tier-value" style="color:var(--accent)">⚠️ BLANK — must enter</span></div>
+        <div class="tier-row"><span class="tier-label">SOW Price (12mo)</span><span class="tier-value"><code>H138</code> (= H136 × E137)</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-label">Global Inputs — Apply to All Tiers</div>
+  <div class="tiers-grid">
+    <div class="tier-card">
+      <div class="tier-header" style="background:#3a3a3a;color:#f7f5f0">SHARED CELLS — All Tiers</div>
+      <div class="tier-body">
+        <div class="tier-row"><span class="tier-label">Bill Rate (B15)</span><span class="tier-value">Manual input. Tier 1=$350, Tier 2=$250, C-Suite=$600 (mature). Emerging: -$50 each.</span></div>
+        <div class="tier-row"><span class="tier-label">Margin (B16)</span><span class="tier-value tier-diff">⚠️ Should be 0.65 (65%) — file shows 0.70 (70%)</span></div>
+        <div class="tier-row"><span class="tier-label">PM Fee rate</span><span class="tier-value">12% of coach cost — hardcoded in formulas</span></div>
+        <div class="tier-row"><span class="tier-label">Hogan Insight</span><span class="tier-value">= 3 assessments: HPI + HDS + MVPI (1 line item)</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ EXCEL ═══ -->
+<div id="excel-panel" class="panel">
+  <div class="section-label">Excel Cell Map — Coaching Calculator Sheet — IGNITE (Primary SOW Tier)</div>
+  <div class="var-table-wrap">
+    <table>
+      <thead><tr><th>Cell</th><th>Session / Field</th><th>Default Value</th><th>Min / Range</th><th>Who Writes It</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>B15</td><td>Coaching Bill Rate</td><td>$350/hr</td><td>$200–$600</td><td>AI Agent</td><td>Depends on market type + seniority. Must be detected from transcript.</td></tr>
+        <tr class="corrected-row"><td>B16</td><td>Margin</td><td><strong>0.65 (65%)</strong></td><td>—</td><td>AI Agent</td><td>⚠️ File shows 0.70 — Megan confirmed 65% is correct per zoom recording.</td></tr>
+        <tr><td>B37</td><td>Initial Coaching Session hours</td><td>0.5 hr</td><td>Fixed</td><td>—</td><td>Never changes. 30-min intro session. No reduction lever.</td></tr>
+        <tr><td>B38</td><td>Stakeholder 1: ASM hours</td><td>1.0 hr</td><td>Min: 0.5 hr</td><td>AI Agent</td><td>Lever 1. Reduce to 45min then 30min under budget pressure.</td></tr>
+        <tr><td>B39</td><td>Dev History Interview hours</td><td>2.0 hrs</td><td>Min: 1.5 hrs</td><td>AI Agent</td><td>Lever 2. Never go below 90min. Triggers SOW duration update.</td></tr>
+        <tr><td>B40</td><td>Interview-based 360° hours</td><td>=(45×8)/60 = 6</td><td>Min: =(45×5)/60 = 3.75</td><td>AI Agent</td><td>Lever 3. Formula: =(interviews×45)/60. Hard floor: 5 interviews.</td></tr>
+        <tr><td>B41</td><td>Assessment Feedback hours</td><td>2.0 hrs</td><td>Min: 1.5 hrs</td><td>AI Agent</td><td>Lever 6 (Last Resort B). Megan strongly resists cutting.</td></tr>
+        <tr><td>B42</td><td>Dev Planning Session hours</td><td>1.0 hr</td><td>Min: 0 (removable)</td><td>AI Agent</td><td>Lever 5 (Last Resort A). Can be fully removed in severe cases.</td></tr>
+        <tr><td>B43</td><td>Stakeholder 2: SDP Presentation hours</td><td>1.0 hr</td><td>Min: 0.5 hr</td><td>AI Agent</td><td>Lever 1. Same rule as other stakeholder sessions.</td></tr>
+        <tr><td>B44</td><td>Implementation Sessions hours</td><td>8.0 hrs (8×1hr)</td><td>Min: 7 sessions</td><td>AI Agent</td><td>Lever 4. Reduce COUNT only — never reduce per-session duration.</td></tr>
+        <tr><td>B45</td><td>Stakeholder 3: Mid-Point hours</td><td>1.0 hr</td><td>Min: 0.5 hr</td><td>AI Agent</td><td>Lever 1. Can be removed if reducing to 3 total stakeholder meetings.</td></tr>
+        <tr><td>B46</td><td>Stakeholder 4: Wrap-Up hours</td><td>1.0 hr</td><td>Min: 0.5 hr</td><td>AI Agent</td><td>Lever 1.</td></tr>
+        <tr><td>E37</td><td>Coaching Zone Fee — months</td><td>9 months</td><td>7–9 months</td><td>AI Agent</td><td>Extract duration from transcript. IGNITE = 7-9 months range.</td></tr>
+        <tr><td>F37</td><td>CZ monthly rate</td><td>$75</td><td>Fixed for IGNITE</td><td>—</td><td>$75 for IGNITE/ROADMAP/SPARK. $50 for ASCENT/VISTA.</td></tr>
+        <tr><td>E38</td><td>LD12 360° quantity</td><td>0</td><td>0 or 1</td><td>—</td><td>⚠️ IGNITE does NOT include LD12 360°. Interview-based 360° is used instead.</td></tr>
+        <tr><td>E39</td><td>LD12 quantity</td><td>1</td><td>0 or 1</td><td>AI Agent</td><td>Standard inclusion. Remove only if client specifically opts out.</td></tr>
+        <tr><td>E40</td><td>Hogan Insight quantity</td><td>1</td><td>0 or 1</td><td>AI Agent</td><td>= 3 assessments bundled: HPI, HDS, MVPI.</td></tr>
+        <tr><td>E41</td><td>TES quantity</td><td>blank (0)</td><td>0 or 1</td><td>AI Agent</td><td>Optional. Include if team effectiveness survey is in scope.</td></tr>
+        <tr class="corrected-row"><td>E49</td><td># of Participants</td><td>⚠️ BLANK</td><td>1+</td><td>AI Agent</td><td>Must be populated. Drives H50 total price. If blank, H50 = blank.</td></tr>
+        <tr><td>H44</td><td>Total Assessments & Fees per Participant</td><td>=SUM(G37:G43)</td><td>Auto-calc</td><td>Excel</td><td>Auto-calculated. Do not write directly.</td></tr>
+        <tr><td>H47</td><td>Total Services including margin</td><td>=B50/(1−B16)</td><td>Auto-calc</td><td>Excel</td><td>Auto-calculated.</td></tr>
+        <tr><td>H48</td><td>Engagement Total Per Participant</td><td>=SUM(H42:H47)</td><td>Auto-calc</td><td>Excel</td><td>Per-participant price. Use for SOW if 1 participant.</td></tr>
+        <tr class="corrected-row"><td>H50</td><td>Total for Engagement (all participants)</td><td>=H48×E49</td><td>Auto-calc</td><td>Excel</td><td>⚠️ This is the SOW price field. Maps 1:1 to SOW price paragraph.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ SOW ═══ -->
+<div id="sow-panel" class="panel">
+  <div class="section-label">SOW Template Field Map — Every Field, Every Rule</div>
+
+  <div class="sow-stage">
+    <div class="sow-stage-header">📋 Header Section</div>
+    <div class="sow-row dynamic">
+      <div class="sow-field">Date</div>
+      <div class="sow-rule">Meeting date or engagement start date extracted from transcript</div>
+      <div class="sow-trigger">NLP extraction</div>
+    </div>
+    <div class="sow-row dynamic">
+      <div class="sow-field">Client name</div>
+      <div class="sow-rule">Extracted from transcript. Used in header, body paragraph, 2× in policy section, and signature block — <strong>5 locations total</strong></div>
+      <div class="sow-trigger">NLP extraction</div>
+    </div>
+    <div class="sow-row dynamic corrected">
+      <div class="sow-field">ID# (header + footer)</div>
+      <div class="sow-rule">HubSpot Deal ID. Must appear in BOTH the header and the footer of the document. Andrew's comments 6 and 7 confirm both locations.</div>
+      <div class="sow-trigger">HubSpot CRM or transcript</div>
+    </div>
+    <div class="sow-row dynamic">
+      <div class="sow-field">Prepared by</div>
+      <div class="sow-rule">Default: "Megan Marshall | Managing Partner, AIIR Consulting" — update if different partner</div>
+      <div class="sow-trigger">Default / assigned partner</div>
+    </div>
+  </div>
+
+  <div class="sow-stage">
+    <div class="sow-stage-header">📖 Program Description Paragraphs</div>
+    <div class="sow-row static">
+      <div class="sow-field">Intro paragraph ("Ignite is a four-phase...")</div>
+      <div class="sow-rule">⛔ NEVER CHANGE. Boilerplate. Megan explicitly said "I never change this." Comment 12.</div>
+      <div class="sow-trigger">Static — no variable</div>
+    </div>
+    <div class="sow-row dynamic corrected">
+      <div class="sow-field">Stakeholder meeting count ("four formal stakeholder meetings")</div>
+      <div class="sow-rule">Default: "four." If reduced to 3 stakeholder meetings, update to "three." Megan would never go below 3. Comment 3.</div>
+      <div class="sow-trigger">Calculated from B38+B43+B45+B46</div>
+    </div>
+    <div class="sow-row dynamic corrected">
+      <div class="sow-field">Coach name ("delivered by Jonathan Kirschner")</div>
+      <div class="sow-rule">Only insert real coach name if chemistry call is complete. Otherwise use: "a Senior Level AIIR Consultant." Comment 16.</div>
+      <div class="sow-trigger">Transcript signal + chemistry status</div>
+    </div>
+    <div class="sow-row dynamic">
+      <div class="sow-field">Duration range ("six- to nine-month")</div>
+      <div class="sow-rule">Update to match selected tier. IGNITE = "six- to nine-month." ROADMAP = "four- to six-month." etc.</div>
+      <div class="sow-trigger">Tier selection</div>
+    </div>
+    <div class="sow-row dynamic corrected">
+      <div class="sow-field">'Client' vs 'coachee' terminology</div>
+      <div class="sow-rule">Default is 'client' in the template. Detect which term the client uses in the transcript and match it throughout. Comment 13.</div>
+      <div class="sow-trigger">NLP detection from transcript</div>
+    </div>
+  </div>
+
+  <div class="sow-stage">
+    <div class="sow-stage-header">📊 Stage I: Assessment — Deliverables Table</div>
+    <div class="sow-row static">
+      <div class="sow-field">Coaching Kickoff Session</div>
+      <div class="sow-rule">"30-minute session" — never changes. Note: terminology uses 'client' not 'coachee' by default. Comment 5.</div>
+      <div class="sow-trigger">Static</div>
+    </div>
+    <div class="sow-row static">
+      <div class="sow-field">Stakeholder Meeting 1: ASM</div>
+      <div class="sow-rule">Description text stays the same. Duration not explicitly stated in text — no update needed unless session removed.</div>
+      <div class="sow-trigger">Static text</div>
+    </div>
+    <div class="sow-row dynamic corrected">
+      <div class="sow-field">Developmental History Interview</div>
+      <div class="sow-rule">If B39 = 2 hrs → keep as-is OR delete the duration mention. If B39 = 1.5 hrs → update to "90-minute." Megan sometimes just removes the hour reference entirely. Comment 10.</div>
+      <div class="sow-trigger">Excel cell B39</div>
+    </div>
+    <div class="sow-row dynamic corrected">
+      <div class="sow-field">Interview-Based 360° Assessment ("up to 8 confidential interviews")</div>
+      <div class="sow-rule">Update interview count if B40 reduced. "up to 8" → "up to 5" etc. If 360 eliminated entirely, remove this row from table. Comment 7.</div>
+      <div class="sow-trigger">Excel cell B40 / E38</div>
+    </div>
+    <div class="sow-row dynamic corrected">
+      <div class="sow-field">Psychometric Assessment Battery ("four psychometric assessments")</div>
+      <div class="sow-rule">If Hogan removed (E40=0), remove HPI/HDS/MVPI entries. If LD12 removed (E39=0), remove LD12 entry. Update count from "four" accordingly.</div>
+      <div class="sow-trigger">Excel cells E39, E40, E41</div>
+    </div>
+  </div>
+
+  <div class="sow-stage">
+    <div class="sow-stage-header">🔍 Stage II: Insight — Deliverables Table</div>
+    <div class="sow-row dynamic corrected">
+      <div class="sow-field">Integration and Analysis of Data ("three streams of data")</div>
+      <div class="sow-rule">If 360° is eliminated: change "three streams of data (360° data, psychometric results, and Developmental History Interview)" → "two streams of data (psychometric results and Developmental History Interview)." Comment 9.</div>
+      <div class="sow-trigger">360° elimination decision</div>
+    </div>
+    <div class="sow-row dynamic corrected">
+      <div class="sow-field">Assessment Feedback Session ("typically two-hours")</div>
+      <div class="sow-rule">If B41 = 2hrs: delete the duration sentence entirely ("This meeting is typically two-hours in duration."). If B41 = 1.5hrs: update to "90-minute." Comment 15.</div>
+      <div class="sow-trigger">Excel cell B41</div>
+    </div>
+    <div class="sow-row dynamic corrected">
+      <div class="sow-field">Development Planning Session ("1-hour session")</div>
+      <div class="sow-rule">If B42 reduced: update "1-hour" → "30-minute." If B42 = 0 (removed): remove this entire row from the table. Comment 10.</div>
+      <div class="sow-trigger">Excel cell B42</div>
+    </div>
+  </div>
+
+  <div class="sow-stage">
+    <div class="sow-stage-header">⚡ Stage III: Implementation — Deliverables Table</div>
+    <div class="sow-row dynamic">
+      <div class="sow-field">Implementation Coaching Sessions ("8 executive coaching sessions")</div>
+      <div class="sow-rule">Update count if B44 reduced from 8 to 7. Update "8 executive coaching sessions" → "7 executive coaching sessions."</div>
+      <div class="sow-trigger">Excel cell B44</div>
+    </div>
+  </div>
+
+  <div class="sow-stage">
+    <div class="sow-stage-header">💰 Professional Fees & Terms</div>
+    <div class="sow-row dynamic corrected">
+      <div class="sow-field">Total price ("offered for $27,445")</div>
+      <div class="sow-rule">1:1 mapping from Excel H50 (Total for Engagement = H48 × E49). If 1 participant: H48 = H50. Andrew's comment 11 explicitly confirms this mapping.</div>
+      <div class="sow-trigger">Excel cell H50</div>
+    </div>
+    <div class="sow-row dynamic corrected">
+      <div class="sow-field">Payment structure (50%/50% lines)</div>
+      <div class="sow-rule">⚠️ DEFAULT is 100% upfront at kickoff — NOT 50/50. Only change to 50/50 if client explicitly negotiates it. When 50/50: "50% invoiced upon kickoff" + "50% invoiced three months following kickoff." Comment 12.</div>
+      <div class="sow-trigger">Transcript payment signal</div>
+    </div>
+    <div class="sow-row dynamic corrected">
+      <div class="sow-field">Payment terms ("within 45 days")</div>
+      <div class="sow-rule">This SOW already shows 45-day terms (negotiated for Client A). Default is 30 days. 45 days requires CFO approval. Comment 13.</div>
+      <div class="sow-trigger">Transcript net-day signal + CFO approval</div>
+    </div>
+  </div>
+
+  <div class="sow-stage">
+    <div class="sow-stage-header">🔒 Policies + Signature Block</div>
+    <div class="sow-row static">
+      <div class="sow-field">Cancellation Policy</div>
+      <div class="sow-rule">⛔ NEVER CHANGE. Static boilerplate.</div>
+      <div class="sow-trigger">Static</div>
+    </div>
+    <div class="sow-row static">
+      <div class="sow-field">Confidentiality Policy</div>
+      <div class="sow-rule">⛔ NEVER CHANGE. Static boilerplate.</div>
+      <div class="sow-trigger">Static</div>
+    </div>
+    <div class="sow-row dynamic corrected">
+      <div class="sow-field">Client name in policy paragraph ("Client A" — 2 occurrences)</div>
+      <div class="sow-rule">Two separate replacements in the policy paragraph: "AIIR is not responsible for any payment processing fees or taxes incurred by [Client A]" and "AIIR is entitled to receive the full payment amount specified in this SOW." Comments 14 and 15.</div>
+      <div class="sow-trigger">NLP extracted client name</div>
+    </div>
+    <div class="sow-row dynamic corrected">
+      <div class="sow-field">Client name in signature block ("Client A" right side)</div>
+      <div class="sow-rule">Third separate replacement. Comment 16. Total of 3 client name replacements across the full document.</div>
+      <div class="sow-trigger">NLP extracted client name</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ KEYWORDS ═══ -->
+<div id="keywords-panel" class="panel">
+  <div class="section-label">Keyword & Signal Reference — All Categories</div>
+
+  <div class="kw-section">
+    <div class="section-label" style="margin-bottom:12px">💰 Budget Constraint Signals — triggers hour reduction workflow</div>
+    <div class="kw-group">
+      <div class="kw-group-title"><span class="kw-dot" style="background:#c8420a"></span>Any of these → activate reduction hierarchy</div>
+      <div class="kw-tags">
+        <span class="kw-tag">"too expensive"</span><span class="kw-tag">"too costly"</span>
+        <span class="kw-tag">"budget is $X"</span><span class="kw-tag">"cap at $X"</span>
+        <span class="kw-tag">"we typically pay around $X"</span>
+        <span class="kw-tag">"that price feels high"</span>
+        <span class="kw-tag">"more cost-conscious"</span>
+        <span class="kw-tag">"we do not pay over $X"</span>
+        <span class="kw-tag">"need to come down in cost"</span>
+        <span class="kw-tag">"outside our usual range"</span>
+        <span class="kw-tag">"our benchmark is $X"</span>
+        <span class="kw-tag">"we've only used independent coaches"</span>
+        <span class="kw-tag">"like your offering, but..."</span>
+        <span class="kw-tag">"we need something more accessible"</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="kw-section">
+    <div class="section-label" style="margin-bottom:12px">🔄 360° Interview — KEEP Signals — do NOT reduce even under budget pressure</div>
+    <div class="kw-group">
+      <div class="kw-group-title"><span class="kw-dot" style="background:#2a6b3c"></span>Any of these → preserve full 8-interview 360°</div>
+      <div class="kw-tags">
+        <span class="kw-tag">"self-awareness"</span><span class="kw-tag">"leadership brand"</span>
+        <span class="kw-tag">"executive presence"</span>
+        <span class="kw-tag">"how others experience them"</span>
+        <span class="kw-tag">"stakeholder perception"</span>
+        <span class="kw-tag">"blind spots"</span>
+        <span class="kw-tag">"needs honest feedback"</span>
+        <span class="kw-tag">"needs broader perspective"</span>
+        <span class="kw-tag">"reputation internally"</span>
+        <span class="kw-tag">"influence with stakeholders"</span>
+        <span class="kw-tag">"performance concerns"</span>
+        <span class="kw-tag">"feedback from the team hasn't been great"</span>
+        <span class="kw-tag">"communication or presence issues"</span>
+        <span class="kw-tag">"needs to work on stakeholder relationships"</span>
+        <span class="kw-tag">"some performance concerns"</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="kw-section">
+    <div class="section-label" style="margin-bottom:12px">❌ 360° Interview — ELIMINATE Signals — remove or replace with existing data</div>
+    <div class="kw-group">
+      <div class="kw-group-title"><span class="kw-dot" style="background:#7a3a1a"></span>Any of these → set B40=0, update SOW "three streams" → "two streams"</div>
+      <div class="kw-tags">
+        <span class="kw-tag">"just completed a 360"</span>
+        <span class="kw-tag">"already have feedback from the organization"</span>
+        <span class="kw-tag">"went through a 360 last quarter"</span>
+        <span class="kw-tag">"we can share their previous assessment"</span>
+        <span class="kw-tag">"we already have feedback"</span>
+        <span class="kw-tag">"they already have assessment data"</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="kw-section">
+    <div class="section-label" style="margin-bottom:12px">💳 Payment Terms Signals</div>
+    <div class="kw-group">
+      <div class="kw-group-title"><span class="kw-dot" style="background:#1a4a7a"></span>Payment Structure — default is 100% upfront ⚠️</div>
+      <div class="kw-tags">
+        <span class="kw-tag">No signal → 100% upfront at kickoff (DEFAULT)</span>
+        <span class="kw-tag">"50-50" / "50/50" / "split" → 50% kickoff + 50% at month 3</span>
+        <span class="kw-tag">"milestone" → stage-based invoicing</span>
+        <span class="kw-tag">"installments" → discuss structure</span>
+      </div>
+    </div>
+    <div class="kw-group" style="margin-top:10px">
+      <div class="kw-group-title"><span class="kw-dot" style="background:#1a4a7a"></span>Net Payment Days — default is 30 days</div>
+      <div class="kw-tags">
+        <span class="kw-tag">No signal → 30 days (DEFAULT)</span>
+        <span class="kw-tag">"net 45" / "45 days" → 45-day terms (⚠️ requires CFO approval)</span>
+        <span class="kw-tag">"net 30" / "30 days" → 30-day terms</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="kw-section">
+    <div class="section-label" style="margin-bottom:12px">🎯 Tier Selection Signals</div>
+    <div class="kw-group">
+      <div class="kw-group-title"><span class="kw-dot" style="background:#4a4a4a"></span>Duration + seniority signals mapped to tiers</div>
+      <div class="kw-tags">
+        <span class="kw-tag">10-12 months / C-Suite / VP+ → ASCENT</span>
+        <span class="kw-tag">6-9 months / Senior leader → IGNITE</span>
+        <span class="kw-tag">4-6 months / mid-level → ROADMAP</span>
+        <span class="kw-tag">3-4 months / early career / junior → SPARK I</span>
+        <span class="kw-tag">4-5 months / early career → SPARK II</span>
+        <span class="kw-tag">advisory / on-demand / executive → AIIR VISTA</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="kw-section">
+    <div class="section-label" style="margin-bottom:12px">💵 Bill Rate Signals</div>
+    <div class="kw-group">
+      <div class="kw-group-title"><span class="kw-dot" style="background:#b8650a"></span>Market type detection</div>
+      <div class="kw-tags">
+        <span class="kw-tag">US / UK / Western Europe / Australia → Mature market</span>
+        <span class="kw-tag">Latin America / Asia / Eastern Europe / Africa → Emerging market</span>
+        <span class="kw-tag">Explicit mention of region/country → use that market rate</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ HIERARCHY ═══ -->
+<div id="hierarchy-panel" class="panel">
+  <div class="section-label">Reduction Hierarchy — Megan's Priority Order — 6 Levers (Corrected)</div>
+  <div class="lever-list">
+
+    <div class="lever">
+      <div class="lever-num l1">1</div>
+      <div class="lever-body">
+        <div class="lever-title">Stakeholder Sessions — Reduce First</div>
+        <div class="lever-meta">
+          Default: 60 min each × 4 sessions = 4 hrs total &nbsp;|&nbsp; Min: 30 min each<br>
+          IGNITE cells: B38 (ASM) · B43 (SDP) · B45 (Midpoint) · B46 (Wrap-Up)
+        </div>
+        <div class="lever-desc">Lowest-risk sessions to shorten. All four stakeholder meetings follow the same rule: 60 min → 45 min → 30 min minimum. <strong>Megan would never go below 30 min for any stakeholder session.</strong> If reducing to 3 total meetings (removing Midpoint), also update the SOW description paragraph from "four" to "three." Trigger: any budget constraint signal.</div>
+      </div>
+    </div>
+
+    <div class="lever">
+      <div class="lever-num l2">2</div>
+      <div class="lever-body">
+        <div class="lever-title">Developmental History Interview — Second Lever</div>
+        <div class="lever-meta">
+          Default: 2 hrs &nbsp;|&nbsp; Min: 90 min (1.5 hrs) — NEVER go below 90 min<br>
+          IGNITE cell: B39 &nbsp;|&nbsp; Note: SPARK I has NO interview — uses survey only
+        </div>
+        <div class="lever-desc">Coach and coachee use this session to deeply understand the coachee's background, aspirations, and development needs. Megan drops from 2 hrs → 90 min under budget pressure. <strong>She will not go below 90 minutes.</strong> When reduced: update SOW table text from "2-hour" → "90-minute" OR remove the duration mention entirely (Megan's preference).</div>
+      </div>
+    </div>
+
+    <div class="lever">
+      <div class="lever-num l3">3</div>
+      <div class="lever-body">
+        <div class="lever-title">Interview-Based 360° — Third Lever (with sub-logic)</div>
+        <div class="lever-meta">
+          Default: 8 interviews × 45 min = 6 hrs &nbsp;|&nbsp; Hard floor: 5 interviews × 45 min = 3.75 hrs<br>
+          IGNITE cell: B40 — formula: =(number_of_interviews × 45) / 60
+        </div>
+        <div class="lever-desc"><strong>Only reduce if NO self-awareness/executive presence signals are detected AND budget constraint exists.</strong><br><br>
+          Two reduction approaches:<br>
+          — Reduce interview count: 8 → 5 (hard minimum, never below 5)<br>
+          — Reduce time per interview: 45 min → 30 min<br><br>
+          <strong>Eliminate entirely</strong> if client already has recent 360 data. When eliminated: set B40=0, remove 360° row from SOW table, update "three streams of data" → "two streams of data" in Stage II description.
+        </div>
+        <div class="lever-special">⚠️ IGNITE uses interview-based 360° (B40). ROADMAP uses LD12 360° survey (E22=1). SPARK I & II use survey-based 360° (assessment fee, not coaching hours). These are completely different mechanisms per tier.</div>
+      </div>
+    </div>
+
+    <div class="lever">
+      <div class="lever-num l4">4</div>
+      <div class="lever-body">
+        <div class="lever-title">Implementation Sessions — Fourth Lever</div>
+        <div class="lever-meta">
+          Default: 8 sessions × 1 hr = 8 hrs (IGNITE) &nbsp;|&nbsp; Min: 7 sessions<br>
+          IGNITE cell: B44 — reduce SESSION COUNT only, never reduce per-session duration
+        </div>
+        <div class="lever-desc">Implementation sessions are always 1 hr each — the per-session duration is never shortened. Only the total count is reduced, from 8 → 7. Trigger: prior levers still insufficient to meet budget target. When reduced: update SOW table "8 executive coaching sessions" → "7 executive coaching sessions."</div>
+      </div>
+    </div>
+
+    <div class="lever">
+      <div class="lever-num l5">5</div>
+      <div class="lever-body">
+        <div class="lever-title">Development Planning Session — Last Resort A</div>
+        <div class="lever-meta">
+          Default: 1 hr &nbsp;|&nbsp; Min: 0 hrs (can be fully removed)<br>
+          IGNITE cell: B42 — "In severe cases, I might remove this, but I tend to always keep it." — Megan
+        </div>
+        <div class="lever-desc">Megan tends to keep this session but acknowledges it can be fully removed in severe budget situations. The minimum is 0 — unlike other sessions it has no hours floor. When removed: delete the Development Planning Session row from the SOW deliverables table entirely. When reduced: update "1-hour session" → "30-minute session."</div>
+      </div>
+    </div>
+
+    <div class="lever">
+      <div class="lever-num l5" style="background:#3a3a3a">6</div>
+      <div class="lever-body">
+        <div class="lever-title">Assessment Feedback Session — Last Resort B</div>
+        <div class="lever-meta">
+          Default: 2 hrs &nbsp;|&nbsp; Min: 90 min — NEVER go below 90 min<br>
+          IGNITE cell: B41 — "I try not to cut down. The lowest I would go is 90 minutes." — Megan
+        </div>
+        <div class="lever-desc">Megan strongly resists cutting this session — it is where the coach and coachee review all assessment data in depth. Only used as an absolute last resort when all 5 prior levers have been exhausted. <strong>Minimum: 90 min — never below.</strong> When reduced: update SOW table "typically two-hours in duration" → "90-minute" OR delete that sentence if it remains at 2 hrs (Andrew's note: sometimes just delete it).</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'base',
+  themeVariables: {
+    primaryColor: '#f0ede6',
+    primaryTextColor: '#1a1714',
+    primaryBorderColor: '#c8b89a',
+    lineColor: '#8a8178',
+    secondaryColor: '#e8e4dc',
+    tertiaryColor: '#f7f5f0',
+    background: '#ffffff',
+    mainBkg: '#f7f5f0',
+    nodeBorder: '#c8b89a',
+    clusterBkg: '#f0ede6',
+    titleColor: '#1a1714',
+    edgeLabelBackground: '#f7f5f0',
+    fontFamily: 'DM Mono, monospace',
+    fontSize: '12px'
+  },
+  flowchart: { curve: 'basis', padding: 18, nodeSpacing: 40, rankSpacing: 50 }
+});
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(name + '-panel').classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+</script>
+</body>
+</html>

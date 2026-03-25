@@ -1,0 +1,474 @@
+{
+  "name": "AIIR 2 — SOW Generation",
+  "nodes": [
+    {
+      "id": "w2_n1_webhook",
+      "name": "Pricing Approved Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        250,
+        300
+      ],
+      "webhookId": "aiir-pricing-approve",
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "aiir-pricing-approve",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "w2_n1b_respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        470,
+        480
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<!DOCTYPE html><html><body style='font-family:Arial;text-align:center;padding:60px;'><h1 style='color:#0f9d58;'>✅ Pricing Approved</h1><p>The pricing has been approved. SOW generation is underway.</p><p>You will receive a SOW review email shortly.</p></body></html>",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "w2_n2_read_tracker",
+      "name": "Read Tracker Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        470,
+        300
+      ],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "=1SQSbLTassculs_2owDfSIeigYXvKcWd3PK53DKuV2FA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Tracker",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "engagement_id",
+              "lookupValue": "={{ $json.query.id }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pQl0UnpSh855m4lW",
+          "name": "Tanmay"
+        }
+      }
+    },
+    {
+      "id": "w2_n2b_parse_tracker",
+      "name": "Parse Tracker + Full Variables",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        690,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\n\n// Parse full variables JSON stored in tracker\nlet fullVars = {};\ntry {\n  fullVars = JSON.parse(row.full_variables_json || '{}');\n} catch(e) {\n  fullVars = {};\n}\n\n// Re-read calculated price from Sheets (use stored value)\n// Merge tracker row with full variables\nconst merged = {\n  ...fullVars,\n  ...row,\n  // Ensure key fields come from tracker (may be manually edited)\n  engagement_id: row.engagement_id,\n  client_company: row.client_company || fullVars.client_company,\n  coachee_name: row.coachee_name || fullVars.coachee_name,\n  hubspot_deal_id: row.hubspot_deal_id || fullVars.hubspot_deal_id,\n  coachName: row.coach_name || fullVars.coachName,\n  tier: row.tier || fullVars.tier,\n  billRate: parseFloat(row.bill_rate) || fullVars.billRate,\n  num_participants: parseInt(row.num_participants) || fullVars.num_participants || 1,\n  paymentStructure: row.payment_structure || fullVars.paymentStructure,\n  netDays: parseInt(row.net_days) || fullVars.netDays || 30,\n  totalEngagementPrice: parseFloat((row.total_engagement_price || '0').toString().replace(/[,$]/g, '')) || fullVars.totalEngagementPrice || 0,\n  pricePerParticipant: parseFloat((row.price_per_participant || '0').toString().replace(/[,$]/g, '')) || fullVars.pricePerParticipant || 0,\n  client_email: row.client_email || fullVars.client_email,\n  rationaleDocUrl: row.rationale_doc_url || fullVars.rationaleDocUrl || '',\n  // Restore nested objects from fullVars\n  hours: fullVars.hours || {},\n  reductions: fullVars.reductions || [],\n  interview360Action: fullVars.interview360Action || 'KEEP',\n  interviewCount: fullVars.interviewCount || 8,\n  coachee_terminology: fullVars.coachee_terminology || 'client',\n  flags: fullVars.flags || []\n};\n\nreturn [{ json: merged }];"
+      }
+    },
+    {
+      "id": "w2_n3_read_price",
+      "name": "Re-Read Price from Calculator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        910,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/1SQSbLTassculs_2owDfSIeigYXvKcWd3PK53DKuV2FA/values/Calculator!H48:H50",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pQl0UnpSh855m4lW",
+          "name": "Tanmay"
+        }
+      }
+    },
+    {
+      "id": "w2_n3b_update_price",
+      "name": "Update Price (Post-Review)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1130,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const sheetsResponse = $input.first().json;\nconst prevData = $('Parse Tracker + Full Variables').first().json;\n\n// Use latest price from sheet (reviewer may have adjusted)\nconst values = sheetsResponse.values || [];\nconst freshTotalPrice = parseFloat((values[2]?.[0] || values[0]?.[0] || '0').toString().replace(/[,$]/g, '')) || prevData.totalEngagementPrice;\nconst freshPerParticipant = parseFloat((values[0]?.[0] || '0').toString().replace(/[,$]/g, '')) || prevData.pricePerParticipant;\n\nreturn [{ json: { ...prevData, totalEngagementPrice: freshTotalPrice, pricePerParticipant: freshPerParticipant } }];"
+      }
+    },
+    {
+      "id": "w2_n4_update_tracker_approved",
+      "name": "Mark Pricing Approved in Tracker",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1350,
+        300
+      ],
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "=1SQSbLTassculs_2owDfSIeigYXvKcWd3PK53DKuV2FA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Tracker",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "pricing_approval_status": "APPROVED",
+            "pricing_approved_by": "Reviewer (email link)",
+            "pricing_approved_at": "={{ new Date().toISOString() }}",
+            "price_per_participant": "={{ $json.pricePerParticipant }}",
+            "total_engagement_price": "={{ $json.totalEngagementPrice }}"
+          }
+        },
+        "where": {
+          "values": [
+            {
+              "column": "engagement_id",
+              "condition": "equals",
+              "conditionValue": "={{ $json.engagement_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pQl0UnpSh855m4lW",
+          "name": "Tanmay"
+        }
+      }
+    },
+    {
+      "id": "w2_n5_build_sow_fields",
+      "name": "Build SOW Field Map",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1570,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const v = $input.first().json;\n\n// Count stakeholder sessions to determine 'three' or 'four'\nconst stakeholderReduced = v.reductions?.some(r =>\n  ['B38','B43','B45','B46'].includes(r.cell) && r.to <= 0.5\n);\n// If any stakeholder session eliminated → three; else four\nconst elimCount = ['B38','B43','B45','B46'].filter(c => (v.hours?.[c] || 0) === 0).length;\nconst stakeholderCountText = elimCount >= 1 ? 'three' : 'four';\n\n// Dev History duration text\nconst devHistoryHours = v.hours?.B39 || 2.0;\nlet devHistoryText;\nif (devHistoryHours === 0) {\n  devHistoryText = ''; // SPARK_I: no dev history\n} else if (devHistoryHours <= 1.5) {\n  devHistoryText = '90-minute';\n} else {\n  devHistoryText = '2-hour';\n}\n\n// Assessment Feedback text (counterintuitive rule)\n// 2hrs (default) → DELETE sentence (empty string)\n// 1.5hrs → ADD sentence\nconst assessHours = v.hours?.B41 || 2.0;\nconst assessmentFeedbackText = assessHours <= 1.5\n  ? 'This meeting is 90 minutes in duration.'\n  : ''; // If 2hr, delete the duration sentence\n\n// 360° interview count text\nlet interviewCountText = '';\nif (v.interview360Action === 'ELIMINATE' || v.interviewCount === 0) {\n  interviewCountText = '';\n} else {\n  interviewCountText = `up to ${v.interviewCount} confidential interviews`;\n}\n\n// Streams count: 360° removed → 'two' streams, else 'three'\nconst streamsCount = (v.interview360Action === 'ELIMINATE') ? 'two' : 'three';\n\n// Dev Planning text\nconst devPlanningHours = v.hours?.B42 || 1.0;\nconst devPlanningText = devPlanningHours === 0 ? '' : '1-hour Development Planning Session';\n\n// Format total price\nconst totalPriceFormatted = '$' + Math.round(v.totalEngagementPrice).toLocaleString('en-US');\n\n// Build replacements map\nconst replacements = [\n  { find: '{{HUBSPOT_ID}}',              replace: v.hubspot_deal_id || '[DEAL ID NEEDED]' },\n  { find: '{{STAKEHOLDER_COUNT}}',       replace: stakeholderCountText },\n  { find: '{{COACH_NAME}}',              replace: v.coachName || 'a Senior Level AIIR Consultant' },\n  { find: '{{CLIENT_TERM}}',             replace: v.coachee_terminology || 'client' },\n  { find: '{{DEV_HISTORY_TEXT}}',        replace: devHistoryText },\n  { find: '{{INTERVIEW_COUNT}}',         replace: interviewCountText },\n  { find: '{{STREAMS_COUNT}}',           replace: streamsCount },\n  { find: '{{ASSESSMENT_FEEDBACK_TEXT}}',replace: assessmentFeedbackText },\n  { find: '{{DEV_PLANNING_TEXT}}',       replace: devPlanningText },\n  { find: '{{TOTAL_PRICE}}',             replace: totalPriceFormatted },\n  { find: '{{PAYMENT_STRUCTURE}}',       replace: v.paymentStructure || '100% invoiced upon program kickoff' },\n  { find: '{{NET_DAYS}}',                replace: String(v.netDays || 30) },\n  { find: '{{CLIENT_COMPANY}}',          replace: v.client_company || '[CLIENT COMPANY]' }\n];\n\nconst today = new Date().toISOString().split('T')[0];\nconst sowDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });\nreplacements.push({ find: '{{SOW_DATE}}', replace: sowDate });\n\nconst docName = `${v.client_company || 'Client'}_${v.coachee_name || 'Coachee'}_${v.tier || 'IGNITE'}_SOW_DRAFT_${today}`;\n\nreturn [{ json: { ...v, replacements, docName, today } }];"
+      }
+    },
+    {
+      "id": "w2_n6_copy_template",
+      "name": "Copy SOW Template",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1790,
+        300
+      ],
+      "parameters": {
+        "operation": "copy",
+        "fileId": {
+          "__rl": true,
+          "value": "={{$vars.AIIR_SOW_TEMPLATE_DOC_ID}}",
+          "mode": "id"
+        },
+        "name": "={{ $json.docName }}",
+        "folderId": {
+          "__rl": true,
+          "value": "={{$vars.AIIR_SOW_DRAFTS_FOLDER_ID}}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "pQl0UnpSh855m4lW",
+          "name": "Tanmay"
+        }
+      }
+    },
+    {
+      "id": "w2_n6b_get_doc_id",
+      "name": "Store New Doc ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2010,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const copyResult = $input.first().json;\nconst prevData = $('Build SOW Field Map').first().json;\nconst newDocId = copyResult.id;\nconst newDocUrl = `https://docs.google.com/document/d/${newDocId}/edit`;\nreturn [{ json: { ...prevData, newDocId, newDocUrl } }];"
+      }
+    },
+    {
+      "id": "w2_n7_replace_placeholders",
+      "name": "Replace All Placeholders in SOW",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2230,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ \"https://docs.googleapis.com/v1/documents/\" + $json.newDocId + \":batchUpdate\" }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDocsOAuth2Api",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({\n  requests: $json.replacements.map(r => ({\n    replaceAllText: {\n      containsText: { text: r.find, matchCase: true },\n      replaceText: r.replace\n    }\n  }))\n}) }}",
+        "options": {}
+      },
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "pQl0UnpSh855m4lW",
+          "name": "Tanmay"
+        }
+      }
+    },
+    {
+      "id": "w2_n8_update_tracker_sow",
+      "name": "Update Tracker with SOW Link",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        2450,
+        300
+      ],
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "=1SQSbLTassculs_2owDfSIeigYXvKcWd3PK53DKuV2FA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Tracker",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sow_doc_url": "={{ $('Store New Doc ID').first().json.newDocUrl }}",
+            "sow_approval_status": "PENDING"
+          }
+        },
+        "where": {
+          "values": [
+            {
+              "column": "engagement_id",
+              "condition": "equals",
+              "conditionValue": "={{ $('Store New Doc ID').first().json.engagement_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pQl0UnpSh855m4lW",
+          "name": "Tanmay"
+        }
+      }
+    },
+    {
+      "id": "w2_n9_sow_email",
+      "name": "Send SOW Review Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2670,
+        300
+      ],
+      "parameters": {
+        "sendTo": "={{$vars.AIIR_REVIEWER_EMAIL}}",
+        "subject": "=[AIIR] SOW Review Required — {{ $('Store New Doc ID').first().json.client_company || 'Unknown' }} / {{ $('Store New Doc ID').first().json.coachee_name || 'Unknown' }}",
+        "emailType": "html",
+        "message": "=<html><body>\n<h2>AIIR SOW System — SOW Review Required</h2>\n<p><strong>Engagement ID:</strong> {{ $('Store New Doc ID').first().json.engagement_id }}</p>\n<p>The pricing has been approved. Please review the generated SOW document before it is sent to the client.</p>\n<hr>\n<h3>Engagement Summary</h3>\n<table border='1' cellpadding='5' cellspacing='0'>\n  <tr><td><strong>Client Company</strong></td><td>{{ $('Store New Doc ID').first().json.client_company }}</td></tr>\n  <tr><td><strong>Coachee</strong></td><td>{{ $('Store New Doc ID').first().json.coachee_name }}</td></tr>\n  <tr><td><strong>Tier</strong></td><td>{{ $('Store New Doc ID').first().json.tier }}</td></tr>\n  <tr><td><strong>Total Price</strong></td><td><strong>${{ $('Store New Doc ID').first().json.totalEngagementPrice?.toLocaleString() }}</strong></td></tr>\n  <tr><td><strong>Coach</strong></td><td>{{ $('Store New Doc ID').first().json.coachName }}</td></tr>\n  <tr><td><strong>Payment</strong></td><td>{{ $('Store New Doc ID').first().json.paymentStructure }}</td></tr>\n</table>\n<h3>Actions</h3>\n<p>\n  <a href='{{ $('Store New Doc ID').first().json.newDocUrl }}' style='background:#4285f4;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;margin-right:10px;'>📄 Review SOW Google Doc</a>\n</p>\n<p style='margin-top:20px;'>\n  <a href='https://primary-production-bd72.up.railway.app/webhook/aiir-sow-approve?id={{ $('Store New Doc ID').first().json.engagement_id }}' style='background:#0f9d58;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;font-size:16px;font-weight:bold;'>✅ APPROVE SOW &amp; SEND TO CLIENT</a>\n</p>\n<p style='color:#666;font-size:12px;'>To make changes: edit the Google Doc directly first, then click APPROVE. The system will send the current version of the doc.</p>\n<hr>\n<p style='color:#999;font-size:11px;'>AIIR SOW Automation System | Engagement {{ $('Store New Doc ID').first().json.engagement_id }}</p>\n</body></html>",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "pQl0UnpSh855m4lW",
+          "name": "Tanmay"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Pricing Approved Webhook": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Read Tracker Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Tracker Row": {
+      "main": [
+        [
+          {
+            "node": "Parse Tracker + Full Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Tracker + Full Variables": {
+      "main": [
+        [
+          {
+            "node": "Re-Read Price from Calculator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-Read Price from Calculator": {
+      "main": [
+        [
+          {
+            "node": "Update Price (Post-Review)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Price (Post-Review)": {
+      "main": [
+        [
+          {
+            "node": "Mark Pricing Approved in Tracker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Pricing Approved in Tracker": {
+      "main": [
+        [
+          {
+            "node": "Build SOW Field Map",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build SOW Field Map": {
+      "main": [
+        [
+          {
+            "node": "Copy SOW Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy SOW Template": {
+      "main": [
+        [
+          {
+            "node": "Store New Doc ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store New Doc ID": {
+      "main": [
+        [
+          {
+            "node": "Replace All Placeholders in SOW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace All Placeholders in SOW": {
+      "main": [
+        [
+          {
+            "node": "Update Tracker with SOW Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Tracker with SOW Link": {
+      "main": [
+        [
+          {
+            "node": "Send SOW Review Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "notes": "Workflow 2 — PRODUCTION READY. All credentials set to pQl0UnpSh855m4lW (Tanmay). Sheet ID: 1SQSbLTassculs_2owDfSIeigYXvKcWd3PK53DKuV2FA. All nodes configured."
+  }
+}

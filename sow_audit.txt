@@ -1,0 +1,51 @@
+=======================================================
+PLACEHOLDER AUDIT vs SETUP_INSTRUCTIONS.md
+=======================================================
+OK     {{HUBSPOT_ID}}  (expected 2x, found 2x)
+OK     {{STAKEHOLDER_COUNT}}  (expected 1x, found 1x)
+OK     {{COACH_NAME}}  (expected 1x, found 1x)
+OK     {{CLIENT_TERM}}  (found 15x)
+OK     {{DEV_HISTORY_TEXT}}  (expected 1x, found 1x)
+OK     {{INTERVIEW_COUNT}}  (expected 1x, found 1x)
+OK     {{STREAMS_COUNT}}  (expected 1x, found 1x)
+OK     {{ASSESSMENT_FEEDBACK_TEXT}}  (expected 1x, found 1x)
+OK     {{DEV_PLANNING_TEXT}}  (expected 1x, found 1x)
+OK     {{TOTAL_PRICE}}  (expected 1x, found 1x)
+OK     {{PAYMENT_STRUCTURE}}  (found 1x)
+OK     {{NET_DAYS}}  (expected 1x, found 1x)
+WARN   {{CLIENT_COMPANY}}  (expected 3x, found 4x)
+
+All tokens found in doc:
+  {{ASSESSMENT_FEEDBACK_TEXT}} x1
+  {{CLIENT_COMPANY}} x4
+  {{CLIENT_TERM}} x15
+  {{COACH_NAME}} x1
+  {{DEV_HISTORY_TEXT}} x1
+  {{DEV_PLANNING_TEXT}} x1
+  {{HUBSPOT_ID}} x2
+  {{INTERVIEW_COUNT}} x1
+  {{NET_DAYS}} x1
+  {{PAYMENT_STRUCTURE}} x1
+  {{STAKEHOLDER_COUNT}} x1
+  {{STREAMS_COUNT}} x1
+  {{TOTAL_PRICE}} x1
+
+=======================================================
+LEFTOVER CLIENT DATA CHECK
+=======================================================
+cleaned  "Jonathan Bailey"
+cleaned  "Jonathan Kirschner"
+cleaned  "Client A"
+cleaned  "$27,445"
+cleaned  "395830485039589"
+
+=======================================================
+FULL DOC TEXT
+=======================================================
+Traceback (most recent call last):
+  File "d:\AIIR\full_check_sow.py", line 79, in <module>
+    print(full_text)
+  File "C:\Users\Admin\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 3828-3830: character maps to <undefined>
