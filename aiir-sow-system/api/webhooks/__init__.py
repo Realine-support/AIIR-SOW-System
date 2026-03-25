@@ -1,5 +1,7 @@
 """Webhooks package"""
 
-from . import approve_pricing, approve_sow, google_drive_trigger
+# OLD webhooks (approve_pricing, approve_sow) commented out - not used
+# from . import approve_pricing, approve_sow
+from . import google_drive_trigger, pricing_model_approved
 
-__all__ = ['approve_pricing', 'approve_sow', 'google_drive_trigger']
+__all__ = ['google_drive_trigger', 'pricing_model_approved']
