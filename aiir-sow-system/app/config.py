@@ -4,8 +4,9 @@ Loads environment variables and provides typed configuration
 """
 
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import Optional, Dict, Any
 import os
+import json
 
 
 class Config(BaseSettings):
@@ -17,7 +18,9 @@ class Config(BaseSettings):
     openai_api_key: str
 
     # === Google Cloud Configuration ===
-    google_credentials_path: str
+    # Either provide JSON string (Railway) or file path (local)
+    google_credentials_json: Optional[str] = None
+    google_credentials_path: Optional[str] = None
     google_service_account_email: str
 
     # === Google Drive/Sheets IDs ===
@@ -89,6 +92,23 @@ class Config(BaseSettings):
     def is_development(self) -> bool:
         """Check if running in development environment"""
         return self.environment.lower() == "development"
+
+    def get_google_credentials(self) -> Dict[str, Any]:
+        """
+        Get Google credentials as dictionary
+        Supports both JSON string (Railway) and file path (local)
+        """
+        if self.google_credentials_json:
+            # Railway/production: Use JSON string from environment
+            return json.loads(self.google_credentials_json)
+        elif self.google_credentials_path:
+            # Local development: Use file path
+            with open(self.google_credentials_path, 'r') as f:
+                return json.load(f)
+        else:
+            raise ValueError(
+                "Either GOOGLE_CREDENTIALS_JSON or GOOGLE_CREDENTIALS_PATH must be set"
+            )
 
 
 # Global configuration instance

@@ -7,15 +7,19 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.webhooks import approve_pricing, approve_sow, google_drive_trigger, pricing_model_approved
 from api.cron import watch_transcripts
+from api import health
+from app.config import get_config
 import logging
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Get configuration
+config = get_config()
 
-logger = logging.getLogger(__name__)
+# Configure production-ready logging
+from app.logging_config import configure_logging, get_logger
+configure_logging(environment=config.environment, log_level=config.log_level)
+
+logger = get_logger(__name__)
+logger.info("AIIR SOW System starting", environment=config.environment, version="1.0.0")
 
 # Create FastAPI app
 app = FastAPI(
@@ -24,16 +28,22 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Add CORS middleware
+# Add CORS middleware with production-aware configuration
+allowed_origins = ["*"] if config.is_development else [
+    config.base_url,
+    "https://n8n.aiir.com",  # Add your n8n domain
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust for production
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Include routers
+app.include_router(health.router, tags=["health"])
 app.include_router(approve_pricing.router, tags=["webhooks"])
 app.include_router(approve_sow.router, tags=["webhooks"])
 app.include_router(google_drive_trigger.router, tags=["webhooks"])

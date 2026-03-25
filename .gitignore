@@ -2,6 +2,7 @@
 client_secret_*.json
 *-fcd77f3c1a42.json
 sales-ai-agent-*.json
+oauth_credentials.json
 *.json.backup
 .env
 .env.local
@@ -9,17 +10,74 @@ RAILWAY_ENV_VARIABLES.txt
 GOOGLE_CREDENTIALS_FOR_RAILWAY.txt
 DEPLOYMENT_GUIDE_YOUR_SETUP.md
 
-# Executables
+# Google service account keys (NEVER commit these!)
+*service-account*.json
+*credentials*.json
+
+# Executables and binaries
 *.exe
 ngrok.exe
 
 # Compressed files
 *.zip
 
+# Office documents (templates should be in Google Drive)
+*.docx
+*.xlsx
+*.pptx
+
+# Images
+*.png
+*.jpg
+*.jpeg
+*.gif
+
 # Temporary files
 nul
 *.tmp
 *.log
+
+# Test and development scripts
+test_*.py
+verify_*.py
+check_*.py
+setup_*.py
+cleanup_*.py
+clear_*.py
+fix_*.py
+build_*.py
+dump_*.py
+update_*.py
+
+# Test output files
+*.txt
+!requirements.txt
+!.env.example
+
+# Development documentation (keep only production docs)
+BUSINESS_LOGIC_*.md
+IMPLEMENTATION_*.md
+PROJECT_*.md
+TEST_*.md
+TESTING_*.md
+VERIFICATION_*.md
+QUICK_START*.md
+WEBHOOK_*.md
+OAUTH*.md
+PRODUCTION_CHECKLIST.md
+PRODUCTION_DEPLOYMENT.md
+DEPLOYMENT_GUIDE.md
+CLEANUP_PLAN.md
+
+# n8n workflows (should be in n8n instance)
+n8n/
+*workflow*.json
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
 
 # Python cache
 __pycache__/
