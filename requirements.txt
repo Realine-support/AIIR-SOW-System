@@ -4,8 +4,8 @@ uvicorn[standard]==0.27.0
 python-multipart==0.0.9
 
 # === Data Validation ===
-pydantic==2.6.0
-pydantic-settings==2.1.0
+pydantic==2.8.0
+pydantic-settings==2.3.0
 
 # === Google APIs ===
 google-auth==2.27.0
