@@ -45,10 +45,12 @@ class ExtractedVariables(BaseModel):
     client_company_name: str = Field(
         description="Full name of the client company"
     )
-    coachee_name: str = Field(
+    coachee_name: Optional[str] = Field(
+        default=None,
         description="Full name of the person being coached (the executive)"
     )
-    coachee_title: str = Field(
+    coachee_title: Optional[str] = Field(
+        default=None,
         description="Job title of the coachee (e.g., 'Chief Revenue Officer')"
     )
     coachee_email: Optional[str] = Field(

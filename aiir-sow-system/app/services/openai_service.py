@@ -168,6 +168,7 @@ Look for mentions of:
 
 ## Critical Rules:
 
+0. NEVER return null for coachee_name, coachee_title, or client_company_name — if not found, use "Unknown"
 1. Extract ALL matching keywords/phrases - don't skip any
 2. Be literal with keyword matching - include the actual phrase found
 3. If budget ceiling is mentioned with a number, extract it (e.g., "$25,000" → 25000.0)
