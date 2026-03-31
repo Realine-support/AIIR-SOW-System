@@ -181,6 +181,21 @@ async def process_transcript_to_pricing_simplified(
         # ====================
         logger.info("Step 6: Writing detailed breakdown to Calculator sheet")
 
+        # Create a per-engagement copy of the calculator template
+        raw_drive = google_manager.get_drive_service()
+        copied_sheet = raw_drive.files().copy(
+            fileId=config.calculator_template_id,
+            body={
+                'name': f"Calculator_{engagement_id}",
+                'parents': [config.client_documents_folder_id]
+            },
+            fields='id,webViewLink',
+            supportsAllDrives=True
+        ).execute()
+        per_engagement_sheet_id = copied_sheet['id']
+        calculator_url = copied_sheet['webViewLink']
+        logger.info(f"✓ Created per-engagement Calculator sheet: {calculator_url}")
+
         calculator_updates = [
             {'range': f'{config.calculator_tab_name}!A2', 'values': [[engagement_id]]},
             {'range': f'{config.calculator_tab_name}!B2', 'values': [[extracted.client_company_name]]},
@@ -194,9 +209,8 @@ async def process_transcript_to_pricing_simplified(
             {'range': f'{config.calculator_tab_name}!J2', 'values': [[pricing.total_engagement_price]]},
         ]
 
-        sheets.batch_update(config.calculator_sheet_id, calculator_updates)
-        calculator_url = f"https://docs.google.com/spreadsheets/d/{config.calculator_sheet_id}"
-        logger.info(f"✓ Updated Calculator sheet: {calculator_url}")
+        sheets.batch_update(per_engagement_sheet_id, calculator_updates)
+        logger.info(f"✓ Populated Calculator sheet: {calculator_url}")
 
         # ====================
         # Step 7: Generate pricing rationale
