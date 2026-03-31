@@ -243,7 +243,8 @@ async def process_transcript_to_pricing_simplified(
             try:
                 result = sheets.read_range(per_engagement_sheet_id, total_cell)
                 if result and result[0]:
-                    sheet_total = float(str(result[0][0]).replace(',', ''))
+                    raw = str(result[0][0]).replace(',', '').replace('$', '').strip()
+                    sheet_total = float(raw)
                     logger.info(f"✓ Read total from sheet ({total_cell}): ${sheet_total:,.0f}")
                 else:
                     logger.warning(f"Sheet returned empty for {total_cell} — total will be $0")
