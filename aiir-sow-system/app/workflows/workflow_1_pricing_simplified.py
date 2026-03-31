@@ -187,7 +187,8 @@ async def process_transcript_to_pricing_simplified(
             fileId=config.calculator_template_id,
             body={
                 'name': f"Calculator_{engagement_id}",
-                'parents': [config.client_documents_folder_id]
+                'parents': [config.client_documents_folder_id],
+                'mimeType': 'application/vnd.google-apps.spreadsheet'
             },
             fields='id,webViewLink',
             supportsAllDrives=True
