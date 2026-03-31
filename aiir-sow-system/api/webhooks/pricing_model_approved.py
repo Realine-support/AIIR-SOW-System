@@ -26,7 +26,8 @@ class PricingModelApprovalPayload(BaseModel):
 
 @router.post("/webhooks/pricing-model-approved")
 async def pricing_model_approved(
-    engagement_id: str = Query(..., description="Engagement ID from tracking sheet")
+    payload: Optional[PricingModelApprovalPayload] = None,
+    engagement_id: Optional[str] = Query(None, description="Engagement ID (query param or JSON body)")
 ):
     """
     Handle pricing model approval from n8n Google Sheets Trigger
@@ -53,6 +54,10 @@ async def pricing_model_approved(
     """
     try:
         config = get_config()
+
+        # Accept engagement_id from JSON body OR query param (n8n may send either)
+        eid = (payload.engagement_id if payload else None) or engagement_id
+        engagement_id = eid
 
         logger.info(f"Received pricing model approval for engagement: {engagement_id}")
 
