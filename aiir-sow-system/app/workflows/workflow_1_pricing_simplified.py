@@ -202,6 +202,7 @@ async def process_transcript_to_pricing_simplified(
         # Cell positions match the actual Excel template layout
         calculator_updates = [
             {'range': 'Coaching Calculator!B15', 'values': [[pricing.bill_rate_per_hour]]},
+            {'range': 'Coaching Calculator!B16', 'values': [[0.65]]},  # Correct margin (template default 0.70 is wrong)
             {'range': 'Coaching Calculator!B39', 'values': [[pricing.session_hours.developmental_history_hours]]},
             {'range': 'Coaching Calculator!B40', 'values': [[pricing.session_hours.threesixty_interview_hours]]},
             {'range': 'Coaching Calculator!B41', 'values': [[pricing.session_hours.assessment_feedback_hours]]},
