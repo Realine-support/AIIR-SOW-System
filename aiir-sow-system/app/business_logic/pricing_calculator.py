@@ -7,7 +7,6 @@ from app.models import (
     ExtractedVariables,
     CalculatedPricing,
     SessionHours,
-    ProgramTier,
     BudgetReduction,
 )
 from .tier_selection import select_tier, get_tier_defaults
@@ -94,7 +93,7 @@ def calculate_pricing(extracted: ExtractedVariables) -> CalculatedPricing:
     final_hours = base_hours
 
     if budget_signal_detected:
-        final_hours, budget_reductions, reduced_price = apply_reduction_hierarchy(
+        final_hours, budget_reductions, _ = apply_reduction_hierarchy(
             tier=tier,
             base_hours=base_hours,
             bill_rate=bill_rate,
@@ -102,9 +101,6 @@ def calculate_pricing(extracted: ExtractedVariables) -> CalculatedPricing:
             current_price=initial_price,
             development_needs_strong=development_needs_strong
         )
-        final_price = reduced_price
-    else:
-        final_price = initial_price
 
     # === Step 8: Calculate Total Hours ===
     total_coaching_hours = calculate_total_hours(final_hours)
@@ -115,9 +111,9 @@ def calculate_pricing(extracted: ExtractedVariables) -> CalculatedPricing:
     payment_terms = _extract_payment_terms(extracted.payment_terms_phrases)
 
     # === Step 10: Build CalculatedPricing Object ===
-    full_engagement_price = _compute_full_engagement_price(
-        final_price, tier, final_hours.coaching_zone_months
-    )
+    # total_engagement_price is set to 0.0 here — the workflow reads the true total
+    # directly from the calculator sheet after writing all input values, so the sheet's
+    # own formulas (PM fee, margin, CZ fee, fixed fees) are the single source of truth.
     return CalculatedPricing(
         tier=tier,
         tier_selection_flags=tier_flags,
@@ -129,8 +125,8 @@ def calculate_pricing(extracted: ExtractedVariables) -> CalculatedPricing:
         threesixty_decision=threesixty_decision,
         threesixty_rationale=threesixty_rationale,
         total_coaching_hours=total_coaching_hours,
-        total_engagement_price=full_engagement_price,
-        price_per_participant=full_engagement_price,  # Single participant
+        total_engagement_price=0.0,   # placeholder — overwritten by workflow after sheet read-back
+        price_per_participant=0.0,    # placeholder — overwritten by workflow after sheet read-back
         payment_terms=payment_terms,
     )
 
@@ -171,46 +167,6 @@ def _extract_payment_terms(payment_terms_phrases: list[str]) -> str:
         return f"100% upon completion, {net_days}"
     else:
         return f"100% upfront payment, {net_days}"
-
-
-# Pricing constants (matching Excel calculator)
-_PM_FEE_RATE = 0.12         # Project Management fee (12%)
-_MARGIN = 0.65              # Services margin (NOTE: Excel cell B16 shows 0.70 but correct is 0.65)
-_CZ_RATE_PER_MONTH = 75.0  # Coaching Zone monthly rate (IGNITE F38 corrected value)
-
-# Fixed Assessment Fees per tier
-_FIXED_ASSESSMENT_FEES = {
-    ProgramTier.IGNITE:    450.0,
-    ProgramTier.ROADMAP:   450.0,
-    ProgramTier.ASCENT:    450.0,
-    ProgramTier.SPARK_I:   450.0,
-    ProgramTier.SPARK_II:  450.0,
-    ProgramTier.AIIR_VISTA:  0.0,
-}
-
-
-def _compute_full_engagement_price(
-    coach_cost: float,
-    tier: ProgramTier,
-    coaching_zone_months: int,
-) -> float:
-    """
-    Compute TOTAL ENGAGEMENT PRICE from raw coach cost.
-
-    Matches the Excel calculator formula:
-      PM Fee             = coach_cost × 0.12
-      Services no margin = coach_cost + PM Fee
-      Services w/ margin = services_no_margin / (1 - 0.65)
-      CZ Fee             = coaching_zone_months × $75
-      Fixed Fees         = tier-specific fixed assessment fees
-      TOTAL              = services_w_margin + CZ Fee + Fixed Fees
-    """
-    pm_fee = coach_cost * _PM_FEE_RATE
-    services_no_margin = coach_cost + pm_fee
-    services_with_margin = services_no_margin / (1.0 - _MARGIN)
-    cz_fee = coaching_zone_months * _CZ_RATE_PER_MONTH
-    fixed_fees = _FIXED_ASSESSMENT_FEES.get(tier, 450.0)
-    return round(services_with_margin + cz_fee + fixed_fees, 2)
 
 
 def generate_pricing_rationale(

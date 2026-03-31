@@ -5,18 +5,19 @@ Orchestrates the complete flow from transcript upload to pricing model review
 UPDATED WORKFLOW:
 1. Download transcript from Drive
 2. Extract variables with OpenAI
-3. Calculate pricing using business logic
+3. Calculate pricing inputs using business logic
 4. Generate engagement ID
-5. Write to Tracker sheet with Status="Pending Review" and Pricing Model Status="Pending Review"
-6. Write to Calculator sheet
-7. Generate pricing rationale
-8. Save rationale to Drive
-9. Update Tracker with document URLs
-10. Generate email HTML body for notification
-11. Return engagement data + email data for n8n to send
+5. Copy calculator template + write all input cells
+6. Read total price back from calculator sheet (sheet formulas are source of truth)
+7. Write to Tracker sheet with sheet-sourced total
+8. Generate pricing rationale
+9. Save rationale to Drive
+10. Update Tracker with document URLs
+11. Generate email HTML body for notification
+12. Return engagement data + email data for n8n to send
 
-EMAIL NOTIFICATION ADDED
-Review happens by updating "Pricing Model Status" column in Google Sheets manually
+The calculator sheet owns all price math (PM fee, margin, CZ fee, assessment fees).
+Python only writes inputs; the sheet computes the total.
 """
 
 from datetime import datetime
@@ -24,15 +25,106 @@ from jinja2 import Template
 from app.services import (
     GoogleDriveService,
     GoogleSheetsService,
-    GoogleDocsService,
     OpenAIService
 )
 from app.services.google_services import GoogleServicesManager
 from app.business_logic import calculate_pricing, generate_pricing_rationale
+from app.models import ProgramTier
 from app.config import Config
 import logging
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Cell maps — per tier, "Coaching Calculator" tab
+# Keys match SessionHours field names where applicable.
+# ---------------------------------------------------------------------------
+
+_TIER_INPUT_CELLS = {
+    ProgramTier.ROADMAP: {
+        'cz_months':      'Coaching Calculator!E21',
+        'stakeholder':    'Coaching Calculator!B22',
+        'dev_history':    'Coaching Calculator!B23',
+        'assessment':     'Coaching Calculator!B24',
+        'dev_planning':   'Coaching Calculator!B25',
+        'impl_sessions':  'Coaching Calculator!B27',
+    },
+    ProgramTier.IGNITE: {
+        'cz_months':      'Coaching Calculator!E37',
+        'stakeholder':    'Coaching Calculator!B38',
+        'dev_history':    'Coaching Calculator!B39',
+        'threesixty':     'Coaching Calculator!B40',
+        'assessment':     'Coaching Calculator!B41',
+        'dev_planning':   'Coaching Calculator!B42',
+        'impl_sessions':  'Coaching Calculator!B44',
+    },
+    ProgramTier.ASCENT: {
+        'cz_months':      'Coaching Calculator!E55',
+        'stakeholder':    'Coaching Calculator!B56',
+        'dev_history':    'Coaching Calculator!B57',
+        'threesixty':     'Coaching Calculator!B58',
+        'assessment':     'Coaching Calculator!B59',
+        'dev_planning':   'Coaching Calculator!B60',
+        'impl_sessions':  'Coaching Calculator!B62',
+    },
+    ProgramTier.SPARK_I: {
+        'cz_months':      'Coaching Calculator!E73',
+        'stakeholder':    'Coaching Calculator!B74',
+        'assessment':     'Coaching Calculator!B75',
+        'dev_planning':   'Coaching Calculator!B76',
+        'impl_sessions':  'Coaching Calculator!B77',
+    },
+    ProgramTier.SPARK_II: {
+        'cz_months':      'Coaching Calculator!E91',
+        'stakeholder':    'Coaching Calculator!B92',
+        'dev_history':    'Coaching Calculator!B93',
+        'assessment':     'Coaching Calculator!B94',
+        'dev_planning':   'Coaching Calculator!B95',
+        'impl_sessions':  'Coaching Calculator!B97',
+    },
+    ProgramTier.AIIR_VISTA: {},  # AIIR Vista uses template defaults; no variable inputs
+}
+
+# "Engagement Total Per Participant" cell per tier — this is what we read back
+_TIER_TOTAL_CELL = {
+    ProgramTier.ROADMAP:    'Coaching Calculator!H30',
+    ProgramTier.IGNITE:     'Coaching Calculator!H48',
+    ProgramTier.ASCENT:     'Coaching Calculator!H66',
+    ProgramTier.SPARK_I:    'Coaching Calculator!H82',
+    ProgramTier.SPARK_II:   'Coaching Calculator!H100',
+    ProgramTier.AIIR_VISTA: 'Coaching Calculator!H118',
+}
+
+# SessionHours field → cell key mapping
+_HOURS_FIELD_TO_KEY = {
+    'coaching_zone_months':        'cz_months',
+    'stakeholder_sessions_hours':  'stakeholder',
+    'developmental_history_hours': 'dev_history',
+    'threesixty_interview_hours':  'threesixty',
+    'assessment_feedback_hours':   'assessment',
+    'dev_planning_hours':          'dev_planning',
+    'implementation_sessions':     'impl_sessions',
+}
+
+
+def _build_calculator_updates(pricing) -> list:
+    """Build the batch_update list for the per-engagement calculator sheet."""
+    updates = [
+        {'range': 'Coaching Calculator!B15', 'values': [[pricing.bill_rate_per_hour]]},
+        {'range': 'Coaching Calculator!B16', 'values': [[0.65]]},  # correct margin (template default 0.70 is wrong)
+    ]
+
+    tier_cells = _TIER_INPUT_CELLS.get(pricing.tier, {})
+    hours = pricing.session_hours
+
+    for field, key in _HOURS_FIELD_TO_KEY.items():
+        if key in tier_cells:
+            updates.append({
+                'range': tier_cells[key],
+                'values': [[getattr(hours, field)]],
+            })
+
+    return updates
 
 
 async def process_transcript_to_pricing_simplified(
@@ -46,15 +138,16 @@ async def process_transcript_to_pricing_simplified(
     Steps:
     1. Download transcript from Drive
     2. Extract variables with OpenAI
-    3. Calculate pricing using business logic
+    3. Calculate pricing inputs using business logic
     4. Generate engagement ID
-    5. Write to Tracker sheet with Status="Pending Review" and Pricing Model Status="Pending Review"
-    6. Write to Calculator sheet (detailed breakdown)
-    7. Generate pricing rationale (AI + business logic)
+    5. Copy calculator template, write all input cells, read total back from sheet
+    6. Write to Tracker sheet using the sheet-sourced total
+    7. Generate pricing rationale
     8. Save rationale to Drive
-    9. Update Tracker with URLs and Status
-    10. Generate email HTML for notification
-    11. Return engagement data + email data
+    9. Update Tracker with document URLs
+    10. Get row number
+    11. Generate email HTML for notification
+    12. Return engagement data + email data
 
     Args:
         file_id: Google Drive file ID of transcript
@@ -73,12 +166,10 @@ async def process_transcript_to_pricing_simplified(
     try:
         logger.info(f"[SIMPLIFIED WORKFLOW] Starting for transcript: {filename} (ID: {file_id})")
 
-        # Initialize services (NO GMAIL, NO REDIS)
-        # Use GoogleServicesManager to handle credentials (supports both JSON and file path)
+        # Initialize services
         google_manager = GoogleServicesManager(config)
         drive = GoogleDriveService(google_manager.get_drive_service())
         sheets = GoogleSheetsService(google_manager.get_sheets_service())
-        docs = GoogleDocsService(google_manager.get_docs_service(), google_manager.get_drive_service())
         openai_svc = OpenAIService(config.openai_api_key)
 
         # ====================
@@ -100,15 +191,14 @@ async def process_transcript_to_pricing_simplified(
         logger.info(f"  - Self-awareness signals: {len(extracted.self_awareness_signals)}")
 
         # ====================
-        # Step 3: Calculate pricing
+        # Step 3: Calculate pricing inputs
         # ====================
-        logger.info("Step 3: Calculating pricing with business logic")
+        logger.info("Step 3: Calculating pricing inputs with business logic")
         pricing = calculate_pricing(extracted)
-        logger.info(f"Pricing calculated:")
+        logger.info(f"Pricing inputs calculated:")
         logger.info(f"  - Tier: {pricing.tier.value}")
         logger.info(f"  - Bill Rate: ${pricing.bill_rate_per_hour}/hr")
         logger.info(f"  - Total Hours: {pricing.total_coaching_hours}")
-        logger.info(f"  - Total Price: ${pricing.total_engagement_price:,.0f}")
         logger.info(f"  - 360° Decision: {pricing.threesixty_decision}")
         logger.info(f"  - Budget Reductions Applied: {len(pricing.budget_reductions)}")
 
@@ -122,66 +212,10 @@ async def process_transcript_to_pricing_simplified(
         logger.info(f"Engagement ID: {engagement_id}")
 
         # ====================
-        # Step 5: Write to Tracker sheet
+        # Step 5: Write to Calculator sheet + read total back
         # ====================
-        logger.info("Step 5: Writing engagement to Tracker sheet")
+        logger.info("Step 5: Creating per-engagement Calculator sheet and reading total")
 
-        # Tracker columns (SIMPLIFIED DESIGN - matching actual sheet structure):
-        # A: Engagement ID
-        # B: Date Created
-        # C: Client
-        # D: Coachee
-        # E: Title
-        # F: Program
-        # G: Duration
-        # H: Total Price
-        # I: Payment Terms
-        # J: Calculator
-        # K: SOW
-        # L: Status
-        # M: Notes
-        # N-T: (empty columns)
-        # U: Pricing Model Status
-
-        tracker_row = [
-            engagement_id,                                          # A - Engagement ID
-            datetime.now().strftime("%Y-%m-%d"),                    # B - Date Created
-            extracted.client_company_name,                          # C - Client
-            extracted.coachee_name,                                 # D - Coachee
-            extracted.coachee_title,                                # E - Title
-            pricing.tier.value,                                     # F - Program
-            f"{extracted.engagement_duration_months or ''} months", # G - Duration
-            f"${pricing.total_engagement_price:,.0f}",              # H - Total Price
-            pricing.payment_terms,                                  # I - Payment Terms
-            '',  # Calculator URL (will update in step 9)           # J - Calculator
-            '',  # SOW URL (not generated yet - stays empty)        # K - SOW
-            'Pending Review',  # STATUS                             # L - Status
-            '',  # Notes (empty for user to fill)                   # M - Notes
-            '',  # N (empty)
-            '',  # O (empty)
-            '',  # P (empty)
-            '',  # Q (empty)
-            '',  # R (empty)
-            '',  # S (empty)
-            '',  # T (empty)
-            'Pending Review',  # PRICING MODEL STATUS               # U - Pricing Model Status
-        ]
-
-        # Specify the exact column range to append to (A:U)
-        # This ensures the row is appended to the correct columns, not to hidden columns
-        sheets.append_row(
-            config.tracker_sheet_id,
-            f"{config.tracker_tab_name}!A:U",
-            tracker_row
-        )
-        logger.info(f"✓ Added engagement to Tracker sheet with Status='Pending Review'")
-
-        # ====================
-        # Step 6: Write to Calculator sheet
-        # ====================
-        logger.info("Step 6: Writing detailed breakdown to Calculator sheet")
-
-        # Create a per-engagement copy of the calculator template
         raw_drive = google_manager.get_drive_service()
         copied_sheet = raw_drive.files().copy(
             fileId=config.calculator_template_id,
@@ -195,30 +229,73 @@ async def process_transcript_to_pricing_simplified(
         ).execute()
         per_engagement_sheet_id = copied_sheet['id']
         calculator_url = copied_sheet['webViewLink']
-        logger.info(f"✓ Created per-engagement Calculator sheet: {calculator_url}")
+        logger.info(f"✓ Created Calculator sheet: {calculator_url}")
 
-        # Populate the calculator with engagement-specific values
-        # Tab name is "Coaching Calculator" (from Excel template structure)
-        # Cell positions match the actual Excel template layout
-        calculator_updates = [
-            {'range': 'Coaching Calculator!B15', 'values': [[pricing.bill_rate_per_hour]]},
-            {'range': 'Coaching Calculator!B16', 'values': [[0.65]]},  # Correct margin (template default 0.70 is wrong)
-            {'range': 'Coaching Calculator!B39', 'values': [[pricing.session_hours.developmental_history_hours]]},
-            {'range': 'Coaching Calculator!B40', 'values': [[pricing.session_hours.threesixty_interview_hours]]},
-            {'range': 'Coaching Calculator!B41', 'values': [[pricing.session_hours.assessment_feedback_hours]]},
-            {'range': 'Coaching Calculator!B44', 'values': [[pricing.session_hours.implementation_sessions]]},
-            {'range': 'Coaching Calculator!E37', 'values': [[pricing.session_hours.coaching_zone_months]]},
+        # Write all input cells for this tier
+        calculator_updates = _build_calculator_updates(pricing)
+        sheets.batch_update(per_engagement_sheet_id, calculator_updates)
+        logger.info(f"✓ Wrote {len(calculator_updates)} input cells to Calculator")
+
+        # Read the total back from the sheet — sheet formulas are the source of truth
+        total_cell = _TIER_TOTAL_CELL.get(pricing.tier)
+        sheet_total = 0.0
+        if total_cell:
+            try:
+                result = sheets.read_range(per_engagement_sheet_id, total_cell)
+                if result and result[0]:
+                    sheet_total = float(str(result[0][0]).replace(',', ''))
+                    logger.info(f"✓ Read total from sheet ({total_cell}): ${sheet_total:,.0f}")
+                else:
+                    logger.warning(f"Sheet returned empty for {total_cell} — total will be $0")
+            except Exception as read_err:
+                logger.warning(f"Could not read total from sheet: {read_err}")
+        else:
+            logger.warning(f"No total cell defined for tier {pricing.tier.value}")
+
+        # Propagate sheet total so rationale and email use the correct value
+        pricing.total_engagement_price = sheet_total
+        pricing.price_per_participant = sheet_total
+
+        # ====================
+        # Step 6: Write to Tracker sheet
+        # ====================
+        logger.info("Step 6: Writing engagement to Tracker sheet")
+
+        # Tracker columns (SIMPLIFIED DESIGN):
+        # A: Engagement ID  B: Date Created  C: Client      D: Coachee     E: Title
+        # F: Program        G: Duration      H: Total Price  I: Payment Terms
+        # J: Calculator     K: SOW           L: Status       M: Notes
+        # N-T: (empty)      U: Pricing Model Status
+
+        tracker_row = [
+            engagement_id,                                          # A
+            datetime.now().strftime("%Y-%m-%d"),                    # B
+            extracted.client_company_name,                          # C
+            extracted.coachee_name,                                 # D
+            extracted.coachee_title,                                # E
+            pricing.tier.value,                                     # F
+            f"{extracted.engagement_duration_months or ''} months", # G
+            f"${sheet_total:,.0f}",                                 # H - Total Price (from sheet)
+            pricing.payment_terms,                                  # I
+            '',  # Calculator URL (updated in step 9)               # J
+            '',  # SOW URL (populated by workflow 2)                # K
+            'Pending Review',                                       # L
+            '',                                                     # M
+            '', '', '', '', '', '', '',                             # N-T
+            'Pending Review',                                       # U
         ]
-        try:
-            sheets.batch_update(per_engagement_sheet_id, calculator_updates)
-            logger.info(f"✓ Populated Calculator sheet with engagement values")
-        except Exception as calc_err:
-            logger.warning(f"Could not populate Calculator cells (template defaults will show): {calc_err}")
+
+        sheets.append_row(
+            config.tracker_sheet_id,
+            f"{config.tracker_tab_name}!A:U",
+            tracker_row
+        )
+        logger.info(f"✓ Added engagement to Tracker with Total Price=${sheet_total:,.0f}")
 
         # ====================
         # Step 7: Generate pricing rationale
         # ====================
-        logger.info("Step 7: Generating AI-powered pricing rationale")
+        logger.info("Step 7: Generating pricing rationale")
         rationale_text = generate_pricing_rationale(extracted, pricing)
         logger.info(f"✓ Generated rationale: {len(rationale_text)} characters")
 
@@ -238,15 +315,13 @@ async def process_transcript_to_pricing_simplified(
         # ====================
         # Step 9: Update Tracker with document URLs
         # ====================
-        logger.info("Step 9: Updating Tracker with document URLs")
+        logger.info("Step 9: Updating Tracker with Calculator URL")
         sheets.update_row_by_engagement_id(
             config.tracker_sheet_id,
             config.tracker_tab_name,
             engagement_id,
             {
                 'J': calculator_url,  # Column J: Calculator URL
-                # Note: Column K (SOW) stays empty until workflow 2
-                # Rationale URL stored separately, not in main tracker view
             }
         )
         logger.info(f"✓ Updated Tracker with Calculator URL")
@@ -268,11 +343,9 @@ async def process_transcript_to_pricing_simplified(
         # ====================
         logger.info("Step 11: Generating email notification HTML")
 
-        # Load email template
         with open('templates/pricing_model_ready_email.html', 'r', encoding='utf-8') as f:
             email_template = Template(f.read())
 
-        # Render email HTML
         email_html = email_template.render(
             engagement_id=engagement_id,
             client_company_name=extracted.client_company_name,
@@ -286,7 +359,7 @@ async def process_transcript_to_pricing_simplified(
             threesixty_decision=pricing.threesixty_decision,
             threesixty_hours=pricing.session_hours.threesixty_interview_hours,
             budget_reductions=len(pricing.budget_reductions),
-            total_price=f"{pricing.total_engagement_price:,.0f}",
+            total_price=f"{sheet_total:,.0f}",
             payment_terms=pricing.payment_terms,
             tracking_sheet_url=f"https://docs.google.com/spreadsheets/d/{config.tracker_sheet_id}",
             calculator_url=calculator_url,
@@ -305,7 +378,7 @@ async def process_transcript_to_pricing_simplified(
         logger.info(f"Engagement ID: {engagement_id}")
         logger.info(f"Client: {extracted.client_company_name}")
         logger.info(f"Coachee: {extracted.coachee_name}")
-        logger.info(f"Total Price: ${pricing.total_engagement_price:,.0f}")
+        logger.info(f"Total Price: ${sheet_total:,.0f}  (sourced from calculator sheet)")
         logger.info(f"")
         logger.info(f"NEXT STEPS:")
         logger.info(f"1. Email notification will be sent by n8n")
@@ -318,7 +391,6 @@ async def process_transcript_to_pricing_simplified(
         logger.info(f"Rationale: {rationale_url}")
         logger.info("=" * 80)
 
-        # Return comprehensive data for API response
         return {
             'engagement_id': engagement_id,
             'row_number': row_number,
@@ -333,7 +405,7 @@ async def process_transcript_to_pricing_simplified(
             },
             'pricing_data': {
                 'tier': pricing.tier.value,
-                'total_price': pricing.total_engagement_price,
+                'total_price': sheet_total,
                 'total_hours': pricing.total_coaching_hours,
                 'bill_rate': pricing.bill_rate_per_hour
             }
