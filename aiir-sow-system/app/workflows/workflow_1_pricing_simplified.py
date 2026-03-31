@@ -197,21 +197,22 @@ async def process_transcript_to_pricing_simplified(
         calculator_url = copied_sheet['webViewLink']
         logger.info(f"✓ Created per-engagement Calculator sheet: {calculator_url}")
 
+        # Populate the calculator with engagement-specific values
+        # Tab name is "Coaching Calculator" (from Excel template structure)
+        # Cell positions match the actual Excel template layout
         calculator_updates = [
-            {'range': f'{config.calculator_tab_name}!A2', 'values': [[engagement_id]]},
-            {'range': f'{config.calculator_tab_name}!B2', 'values': [[extracted.client_company_name]]},
-            {'range': f'{config.calculator_tab_name}!C2', 'values': [[pricing.tier.value]]},
-            {'range': f'{config.calculator_tab_name}!D2', 'values': [[pricing.bill_rate_per_hour]]},
-            {'range': f'{config.calculator_tab_name}!E2', 'values': [[pricing.session_hours.implementation_sessions]]},
-            {'range': f'{config.calculator_tab_name}!F2', 'values': [[pricing.session_hours.stakeholder_sessions_hours]]},
-            {'range': f'{config.calculator_tab_name}!G2', 'values': [[pricing.session_hours.developmental_history_hours]]},
-            {'range': f'{config.calculator_tab_name}!H2', 'values': [[pricing.session_hours.threesixty_interview_hours]]},
-            {'range': f'{config.calculator_tab_name}!I2', 'values': [[pricing.session_hours.assessment_feedback_hours]]},
-            {'range': f'{config.calculator_tab_name}!J2', 'values': [[pricing.total_engagement_price]]},
+            {'range': 'Coaching Calculator!B15', 'values': [[pricing.bill_rate_per_hour]]},
+            {'range': 'Coaching Calculator!B39', 'values': [[pricing.session_hours.developmental_history_hours]]},
+            {'range': 'Coaching Calculator!B40', 'values': [[pricing.session_hours.threesixty_interview_hours]]},
+            {'range': 'Coaching Calculator!B41', 'values': [[pricing.session_hours.assessment_feedback_hours]]},
+            {'range': 'Coaching Calculator!B44', 'values': [[pricing.session_hours.implementation_sessions]]},
+            {'range': 'Coaching Calculator!E37', 'values': [[pricing.session_hours.coaching_zone_months]]},
         ]
-
-        sheets.batch_update(per_engagement_sheet_id, calculator_updates)
-        logger.info(f"✓ Populated Calculator sheet: {calculator_url}")
+        try:
+            sheets.batch_update(per_engagement_sheet_id, calculator_updates)
+            logger.info(f"✓ Populated Calculator sheet with engagement values")
+        except Exception as calc_err:
+            logger.warning(f"Could not populate Calculator cells (template defaults will show): {calc_err}")
 
         # ====================
         # Step 7: Generate pricing rationale
